@@ -9,8 +9,9 @@
 (define-condition mmap-error (simple-error)
   ())
 
-(defun cfold (env var form)
-  (if (constantp var env)
+(defun cfold (env form &rest vars)
+  (if (loop for var in vars
+            always (constantp var env))
       `(load-time-value ,form)
       form))
 

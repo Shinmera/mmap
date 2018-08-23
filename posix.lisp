@@ -31,20 +31,18 @@
     (:read osicat-posix:o-rdonly)
     (:write osicat-posix:o-wronly)
     (:create osicat-posix:o-creat)
-    (:exclusive osicat-posix:o-excl)
+    (:ensure-create osicat-posix:o-excl)
     (:truncate osicat-posix:o-trunc)
     (:append osicat-posix:o-append)
     (:no-c-tty osicat-posix:o-noctty)
     (:non-block osicat-posix:o-nonblock)
-    (:ndleay osicat-posix:o-ndelay)
-    (:sync osicat-posix:o-sync)
     (:no-follow osicat-posix:o-nofollow)
     (:async osicat-posix:o-async)
     (:direct osicat-posix:o-direct)
     (:directory osicat-posix:o-directory)
     (:large-file osicat-posix:o-largefile)
-    (:d-sync osicat-posix:o-dsync)
-    (:r-sync osicat-posix:o-rsync)))
+    (:file-sync osicat-posix:o-sync)
+    (:data-sync osicat-posix:o-dsync)))
 
 (cffi:defcfun strerror :string
   (errnum :int))
@@ -54,7 +52,7 @@
 (defmacro check-posix (condition)
   `(unless ,condition
      (error 'mmap-error
-            :format-control "Failed to open file (E~d):~%  ~s"
+            :format-control "Failed mmap file (E~d):~%  ~a"
             :format-arguments (list errno (strerror errno)))))
 
 (declaim (inline %mmap))
@@ -90,10 +88,10 @@
          (reduce #'logior mmap :key #'mmap-flag)))
 
 (define-compiler-macro mmap (&environment env path/size &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)))
-  `(%mmap ,(cfold env path/size `(translate-path/size ,path/size))
-          ,(cfold env open `(reduce #'logior ,open :key #'fopen-flag))
-          ,(cfold env protection `(reduce #'logior ,protection :key #'protection-flag))
-          ,(cfold env mmap `(reduce #'logior ,mmap :key #'mmap-flag))))
+  `(%mmap ,(cfold env `(translate-path/size ,path/size) path/size)
+          ,(cfold env `(reduce #'logior ,open :key #'fopen-flag) open)
+          ,(cfold env `(reduce #'logior ,protection :key #'protection-flag) protection)
+          ,(cfold env `(reduce #'logior ,mmap :key #'mmap-flag) mmap)))
 
 (declaim (inline munmap))
 (defun munmap (addr fd size)

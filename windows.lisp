@@ -6,14 +6,39 @@
 
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
-(cffi:defctype handle :fixme)
-(cffi:defctype lpsecurity-attributes :fixme)
-(cffi:defctype dword :fixme)
-(cffi:defctype size_t :fixme)
+(defconstant create-new 1)
+(defconstant file-flag-no-buffering 536870912)
+(defconstant file-flag-write-through 2147483648)
+(defconstant file-map-copy 1)
+(defconstant file-map-execute 32)
+(defconstant file-map-read 4)
+(defconstant file-map-write 2)
+(defconstant file-share-delete 4)
+(defconstant file-share-read 1)
+(defconstant file-share-write 2)
+(defconstant format-message-from-system 4096)
+(defconstant format-message-ignore-inserts 512)
+(defconstant generic-read 2147483648)
+(defconstant generic-write 1073741824)
+(defconstant invalid-file-size 4294967295)
+(defconstant invalid-handle-value 4294967295)
+(defconstant open-always 4)
+(defconstant open-existing 3)
+(defconstant page-execute-read 32)
+(defconstant page-execute-readwrite 64)
+(defconstant page-readonly 2)
+(defconstant page-readwrite 4)
+(defconstant truncate-existing 5)
+
+(cffi:defctype wchar_t :uint16)
+(cffi:defctype handle :uint64 #+x86 :uint32)
+(cffi:defctype lpsecurity-attributes :uint64 #+x86 :uint32)
+(cffi:defctype dword :uint32)
+(cffi:defctype size_t #+x86-64 :uint64 #+x86 :uint32)
 
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea
-(cffi:defcfun (create-file "CreateFile") handle
-  (path :string)
+(cffi:defcfun (create-file "CreateFileW") handle
+  (path :pointer)
   (access dword)
   (share-mode dword)
   (attributes lpsecurity-attributes)
@@ -22,7 +47,7 @@
   (template-file handle))
 
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
-(cffi:defcfun (create-file-mapping "CreateFileMapping") handle
+(cffi:defcfun (create-file-mapping "CreateFileMappingA") handle
   (file handle)
   (attributes lpsecurity-attributes)
   (protect dword)
@@ -41,36 +66,107 @@
 (cffi:defcfun (unmap-view-of-file "UnmapViewOfFile") :boolean
   (base-address :pointer))
 
-(cffi:defcfun (_close "CloseHandle") :boolean
+(cffi:defcfun (close-handle "CloseHandle") :boolean
   (object handle))
 
+;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesize
+(cffi:defcfun (get-file-size "GetFileSize") dword
+  (file handle)
+  (file-size-high :pointer))
+
+(cffi:defcfun (get-last-error "GetLastError") dword)
+
+(cffi:defcfun (format-message "FormatMessageW") dword
+  (flags dword)
+  (source :pointer)
+  (message-id dword)
+  (language-id dword)
+  (buffer :pointer)
+  (size dword)
+  (arguments :pointer))
+
+(defmacro check-windows (condition)
+  `(unless ,condition
+     (let ((errno (get-last-error)))
+       (cffi:with-foreign-object (string 'wchar_t 256)
+         (format-message (logior format-message-from-system format-message-ignore-inserts)
+                         (cffi:null-pointer) errno 0 string 256 (cffi:null-pointer))
+         (error 'mmap-error
+                :format-control "Failed to mmap file (E~d):~%  ~a"
+                :format-arguments (list errno (cffi:foreign-string-to-lisp string :encoding :utf-16)))))))
+
 (declaim (inline %mmap))
-(defun %mmap (path/size open protection mmap offset)
-  (declare (type fixnum open protection mmap))
+(defun %mmap (path/size open-access open-disposition open-flags protection map-access offset)
+  (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
-  (let (fd size)
+  (let ((fd invalid-handle-value)
+        (size 0))
+    (declare (type (unsigned-byte 64) fd size))
     (etypecase path/size
       (string
-       (setf fd (create-file path/size ...))
-       (setf size FIXME))
+       (cffi:with-foreign-string (string path/size :encoding :utf-16)
+         (setf fd (create-file string
+                               open-access
+                               (logior file-share-delete
+                                       file-share-read
+                                       file-share-write)
+                               0
+                               open-disposition
+                               open-flags
+                               0)))
+       (check-windows (/= fd invalid-handle-value))
+       (cffi:with-foreign-object (high 'dword)
+         (let ((low (get-file-size fd high)))
+           (declare (type (unsigned-byte 16) low))
+           (check-windows (/= low invalid-file-size))
+           (setf size (+ low (ash (cffi:mem-ref high 'dword) 16))))))
       (fixnum
-       (setf fd invalid-handle-value)
        (setf size path/size)))
     (let* ((end (+ size offset))
-           (handle (create-file-mapping fd 0 protection end end (cffi:null-pointer)))
-           (success (map-view-of-file handle mmap offset offset size)))
-      (unless success
-        (close-handle handle)
-        (error "Failed."))
-      (values handle fd size))))
+           (handle (create-file-mapping fd
+                                        0
+                                        protection
+                                        (ldb (byte 16 16) end)
+                                        (ldb (byte 16 0) end)
+                                        (cffi:null-pointer)))
+           (success (map-view-of-file handle
+                                      map-access
+                                      (ldb (byte 16 16) offset)
+                                      (ldb (byte 16 0) offset)
+                                      size)))
+      (handler-bind ((mmap-error (lambda (e)
+                                   (declare (ignore e))
+                                   (close-handle handle))))
+        (check-windows success)
+        (values handle fd size)))))
 
 (defun flagp (flags &rest tests)
   (loop for test in tests
         always (find test flags)))
 
+(defmacro set-flag (var flags test value)
+  `(when (flagp ,flags ,test)
+     (setf ,var (logior ,var ,value))))
+
+(defun translate-open-access (flags)
+  (let ((flag 0))
+    (set-flag flag flags :read generic-read)
+    (set-flag flag flags :write generic-write)
+    flag))
+
+(defun translate-open-disposition (flags)
+  (if (flagp flags :create)
+      (if (flagp flags :ensure-create)
+          create-new
+          open-always)
+      (if (flagp flags :truncate)
+          truncate-existing
+          open-existing)))
+
 (defun translate-open-flags (flags)
-  ;; FIXME
-  )
+  (let ((flag file-attribute-normal))
+    (set-flag flag flags :direct file-flag-no-buffering)
+    (set-flag flag flags :sync file-flag-write-through)))
 
 (defun translate-protection-flags (flags)
   (cond ((flagp flags :write)
@@ -82,23 +178,34 @@
         ((flagp flags :read)
          page-readonly)))
 
-(defun translate-mmap-flags (flags)
-  ;; FIXME
-  )
+(defun translate-access-flags (protection flags)
+  (let ((flag (if (flagp protection :write)
+                  file-map-write
+                  file-map-read)))
+    (set-flag flag protection :exec file-map-execute)
+    (set-flag flag flags :private file-map-copy)
+    flag))
 
-(defun mmap (path/size &key (open '(:read)) (protection '(:read)) (mmap '(:private)))
+(defun mmap (path/size &key (open '(:read)) (protection '(:read)) (mmap '(:private)) (offset 0))
   (%mmap (translate-path/size path/size)
+         (translate-open-access open)
+         (translate-open-disposition open)
          (translate-open-flags open)
          (translate-protection-flags protection)
-         (translate-mmap-flags mmap)))
+         (translate-access-flags protection mmap)
+         offset))
 
-(define-compiler-macro mmap (&environment env path/size &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)))
-  `(%mmap ,(cfold env path/size `(translate-path/size ,path/size))
-          ,(cfold env open `(translate-open-flags ,open))
-          ,(cfold env protection `(translate-protection-flags ,protection))
-          ,(cfold env mmap `(translate-mmap-flags ,mmap))))
+(define-compiler-macro mmap (&environment env path/size &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)) (offset 0))
+  `(%mmap ,(cfold env `(translate-path/size ,path/size) path/size)
+          ,(cfold env `(translate-open-access ,open) open)
+          ,(cfold env `(translate-open-disposition ,open) open)
+          ,(cfold env `(translate-open-flags ,open) open)
+          ,(cfold env `(translate-protection-flags ,protection) protection)
+          ,(cfold env `(translate-access-flags ,protection ,mmap) protection mmap)
+          ,offset))
 
 (declaim (inline munmap))
 (defun munmap (addr fd size)
+  (declare (ignore size))
   (unmap-view-of-file addr)
   (when fd (close-handle fd)))
