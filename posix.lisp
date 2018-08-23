@@ -17,7 +17,6 @@
   (ecase flag
     (:shared osicat-posix:map-shared)
     (:private osicat-posix:map-private)
-    (:fixed osicat-posix:map-fixed)
     (:no-reserve osicat-posix:map-noreserve)
     (:locked osicat-posix:map-locked)
     (:grows-down osicat-posix:map-growsdown)

@@ -182,7 +182,9 @@
                   file-map-write
                   file-map-read)))
     (set-flag flag protection :exec file-map-execute)
-    (set-flag flag flags :private file-map-copy)
+    (unless (or (set-flag flag flags :private file-map-copy)
+                (flagp flags :shared))
+      (error "MMAP flag must include either :PRIVATE or :SHARED."))
     flag))
 
 (defun mmap (path/size &key (open '(:read)) (protection '(:read)) (mmap '(:private)) (offset 0))
