@@ -57,9 +57,7 @@ change could cause severe issues.
 
 The three options OPEN, PROTECTION, and MMAP are lists of flags. Not all of
 those flags are portable, some are only allowed on Linux, some only on non-
-Windows systems. To indicate support, the flags are marked as EVERY if they
-are supported everywhere, POSIX if they do not have Windows support, and
-LINUX if they are only available on Linux.
+Windows systems. To indicate support, the flags are marked as EVERY, POSIX (non-Windows), LINUX, or WINDOWS.
 
 OPEN
 - READ          --- [EVERY] Opens the file for read access.
@@ -70,14 +68,18 @@ OPEN
 - TRUNCATE      --- [EVERY] Truncates the file and replaces it if it exists.
 - DIRECT        --- [EVERY] Causes system buffers to be bypassed.
 - FILE-SYNC     --- [EVERY] Causes writes to the file to be flushed asap.
-- DATA-SYNC     --- [POSIX] 
-- APPEND        --- [POSIX] Causes writes to append to the file.
-- NO-C-TTY      --- [POSIX] 
-- NON-BLOCK     --- [POSIX] 
-- NO-FOLLOW     --- [LINUX] 
-- ASYNC         --- [LINUX] 
-- DIRECTORY     --- [LINUX] 
-- LARGE-FILE    --- [LINUX] 
+- DATA-SYNC     --- [POSIX] Similar to FILE-SYNC, but uses data integrity
+                            semantics rather than file integrity semantics.
+- DONT-CLAIM-TTY--- [POSIX] If the file is a tty and the process does not
+                            already have a controlling tty, this file will
+                            not become the process' controlling tty.
+- NON-BLOCK     --- [POSIX] Attempt to open the file in non-blocking mode,
+                            causing operations on the fd to return asap.
+- NO-FOLLOW     --- [LINUX] Errors if the file is a symlink.
+- ASYNC         --- [LINUX] Enable signal driven IO.
+- DIRECTORY     --- [LINUX] Errors if the file is not a directory.
+- LARGE-FILE    --- [LINUX] Allows opening files with size not representable
+                            by a 32 bit unsigned integer.
 
 PROTECTION
 - READ          --- [EVERY] Allows reading from the memory region. The OPEN
@@ -95,12 +97,19 @@ MMAP
                             area is written to and the change will be
                             visible to other processes. In this case the
                             OPEN flag :WRITE must be specified.
-- NO-RESERVE    --- [LINUX] 
-- LOCKED        --- [LINUX] 
-- GROWS-DOWN    --- [LINUX] 
-- ANONYMOUS     --- [LINUX] 
-- POPULATE      --- [LINUX] 
-- NON-BLOCK     --- [LINUX] 
+- ANONYMOUS     --- [LINUX/WINDOWS] The path should be a number of bytes to
+                            map to memory. The memory region is then mapped
+                            against an \"anonymous\" file.
+- NO-RESERVE    --- [LINUX] Don't reserve swap for this mapping. If memory
+                            runs out, a segfault will be generated instead.
+- LOCKED        --- [LINUX] Locks the region to RAM, preventing it from
+                            being swapped out.
+- GROWS-DOWN    --- [LINUX] Causes the memory region to be mapped with a
+                            decreasing address, like in a stack.
+- POPULATE      --- [LINUX] Pre-populate the memory region with the file
+                            contents, which can help performance.
+- NON-BLOCK     --- [LINUX] Only useful with :POPULATE -- do not perform a
+                            read-ahead.
 
 See MUNMAP
 See WITH-MMAP
