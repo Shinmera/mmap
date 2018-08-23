@@ -75,6 +75,8 @@
   (file handle)
   (file-size-high :pointer))
 
+;; https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx
+
 (cffi:defcfun (get-last-error "GetLastError") dword)
 
 (cffi:defcfun (format-message "FormatMessageW") dword
@@ -175,7 +177,9 @@
         ((flagp flags :read :exec)
          page-execute-read)
         ((flagp flags :read)
-         page-readonly)))
+         page-readonly)
+        (T
+         (error "PROTECTION flags must include :READ."))))
 
 (defun translate-access-flags (protection flags)
   (let ((flag (if (flagp protection :write)
@@ -184,7 +188,7 @@
     (set-flag flag protection :exec file-map-execute)
     (unless (or (set-flag flag flags :private file-map-copy)
                 (flagp flags :shared))
-      (error "MMAP flag must include either :PRIVATE or :SHARED."))
+      (error "MMAP flags must include either :PRIVATE or :SHARED."))
     flag))
 
 (defun mmap (path/size &key (open '(:read)) (protection '(:read)) (mmap '(:private)) (offset 0))

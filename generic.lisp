@@ -45,3 +45,6 @@
                   (,size ,sizeg))
               ,@body)
          (munmap ,addrg ,fdg ,sizeg)))))
+
+;; FIXME: msync?
+;; FIXME: mprotect?

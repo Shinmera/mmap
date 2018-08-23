@@ -62,15 +62,16 @@ are supported everywhere, POSIX if they do not have Windows support, and
 LINUX if they are only available on Linux.
 
 OPEN
-- READ          --- [EVERY] 
-- WRITE         --- [EVERY] 
-- CREATE        --- [EVERY] 
-- ENSURE-CREATE --- [EVERY] 
-- TRUNCATE      --- [EVERY] 
-- DIRECT        --- [EVERY] 
-- FILE-SYNC     --- [EVERY] 
+- READ          --- [EVERY] Opens the file for read access.
+- WRITE         --- [EVERY] Opens the file for write access.
+- CREATE        --- [EVERY] Creates the file if it does not exist yet.
+- ENSURE-CREATE --- [EVERY] Creates the file if it does not exist yet and
+                            errors if it does.
+- TRUNCATE      --- [EVERY] Truncates the file and replaces it if it exists.
+- DIRECT        --- [EVERY] Causes system buffers to be bypassed.
+- FILE-SYNC     --- [EVERY] Causes writes to the file to be flushed asap.
 - DATA-SYNC     --- [POSIX] 
-- APPEND        --- [POSIX] 
+- APPEND        --- [POSIX] Causes writes to append to the file.
 - NO-C-TTY      --- [POSIX] 
 - NON-BLOCK     --- [POSIX] 
 - NO-FOLLOW     --- [LINUX] 
@@ -79,14 +80,21 @@ OPEN
 - LARGE-FILE    --- [LINUX] 
 
 PROTECTION
-- READ          --- [EVERY] 
-- WRITE         --- [EVERY] 
-- EXEC          --- [EVERY] 
-- NONE          --- [POSIX] 
+- READ          --- [EVERY] Allows reading from the memory region. The OPEN
+                            flag :READ is required for this protection mode.
+                            This flag is required on windows.
+- WRITE         --- [EVERY] Allows writing to the memory region.
+- EXEC          --- [EVERY] Allows executing code in the memory region.
+- NONE          --- [POSIX] Prevents accessing the memory region.
 
 MMAP
-- PRIVATE       --- [EVERY] 
-- SHARED        --- [EVERY] 
+- PRIVATE       --- [EVERY] The underlying file is not changed if the memory
+                            area is written to. Copy-on-write is employed to
+                            ensure separation.
+- SHARED        --- [EVERY] The underlying file is changed if the memory
+                            area is written to and the change will be
+                            visible to other processes. In this case the
+                            OPEN flag :WRITE must be specified.
 - NO-RESERVE    --- [LINUX] 
 - LOCKED        --- [LINUX] 
 - GROWS-DOWN    --- [LINUX] 
