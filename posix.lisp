@@ -46,6 +46,17 @@
     (:d-sync osicat-posix:o-dsync)
     (:r-sync osicat-posix:o-rsync)))
 
+(cffi:defcfun strerror :string
+  (errnum :int))
+
+(cffi:defcvar errno :int)
+
+(defmacro check-posix (condition)
+  `(unless ,condition
+     (error 'mmap-error
+            :format-control "Failed to open file (E~d):~%  ~s"
+            :format-arguments (list errno (strerror errno)))))
+
 (declaim (inline %mmap))
 (defun %mmap (path/size open protection mmap offset)
   (declare (type fixnum open protection mmap))
@@ -54,17 +65,20 @@
     (etypecase path/size
       (string
        (setf fd (osicat-posix:open path/size open))
-       (setf size (osicat-posix:stat-size (osicat-posix:fstat fd))))
+       (check-posix (/= -1 fd))
+       (let ((stat (osicat-posix:fstat fd)))
+         (check-posix (not (cffi:null-pointer-p stat)))
+         (setf size (osicat-posix:stat-size stat))))
       (fixnum
        (setf fd -1)
        (setf size path/size)))
-    (let ((addr (osicat-posix:mmap (cffi:null-pointer) size
+    (let ((addr (osicat-posix:mmap (cffi:null-pointer)
+                                   size
                                    protection
                                    mmap
-                                   fd offset)))
-      ;; FIXME: better error checks
-      (when (cffi:null-pointer addr)
-        (error "Failed."))
+                                   fd
+                                   offset)))
+      (check-posix (not (cffi:null-pointer-p addr)))
       (values addr fd size))))
 
 (defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)))

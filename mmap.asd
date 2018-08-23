@@ -21,5 +21,5 @@
                (:file "documentation"))
   :defsystem-depends-on (:trivial-features)
   :depends-on (:documentation-utils
-               (:feature :unix :osicat)
-               (:feature :windows :cffi)))
+               :cffi
+               (:feature :unix :osicat)))

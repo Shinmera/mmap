@@ -6,6 +6,9 @@
 
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
+(define-condition mmap-error (simple-error)
+  ())
+
 (defun cfold (env var form)
   (if (constantp var env)
       `(load-time-value ,form)

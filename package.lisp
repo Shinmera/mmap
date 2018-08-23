@@ -8,6 +8,7 @@
   (:nicknames #:org.shirakumo.fraf.trial.mmap)
   (:use #:cl)
   (:export
+   #:mmap-error
    #:mmap
    #:munmap
    #:with-mmap))
