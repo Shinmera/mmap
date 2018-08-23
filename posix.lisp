@@ -18,7 +18,6 @@
     (:shared osicat-posix:map-shared)
     (:private osicat-posix:map-private)
     (:fixed osicat-posix:map-fixed)
-    (:failed osicat-posix:map-failed)
     (:no-reserve osicat-posix:map-noreserve)
     (:locked osicat-posix:map-locked)
     (:grows-down osicat-posix:map-growsdown)
@@ -49,35 +48,33 @@
 
 (cffi:defcvar errno :int)
 
-(defmacro check-posix (condition)
-  `(unless ,condition
-     (error 'mmap-error
-            :format-control "Failed mmap file (E~d):~%  ~a"
-            :format-arguments (list errno (strerror errno)))))
+(defmacro with-translated-posix-failure (&body body)
+  `(handler-bind ((osicat:system-error
+                    (lambda (e)
+                      (mmap-error (osicat:system-error-code e)
+                                  (osicat:system-error-message e)))))
+     ,@body))
 
 (declaim (inline %mmap))
 (defun %mmap (path/size open protection mmap offset)
   (declare (type fixnum open protection mmap))
   (declare (optimize speed))
-  (let (fd size)
-    (etypecase path/size
-      (string
-       (setf fd (osicat-posix:open path/size open))
-       (check-posix (/= -1 fd))
-       (let ((stat (osicat-posix:fstat fd)))
-         (check-posix (not (cffi:null-pointer-p stat)))
-         (setf size (osicat-posix:stat-size stat))))
-      (fixnum
-       (setf fd -1)
-       (setf size path/size)))
-    (let ((addr (osicat-posix:mmap (cffi:null-pointer)
-                                   size
-                                   protection
-                                   mmap
-                                   fd
-                                   offset)))
-      (check-posix (not (cffi:null-pointer-p addr)))
-      (values addr fd size))))
+  (with-translated-posix-failure
+    (let (fd size)
+      (etypecase path/size
+        (string
+         (setf fd (osicat-posix:open path/size open))
+         (setf size (osicat-posix:stat-size (osicat-posix:fstat fd))))
+        (fixnum
+         (setf fd -1)
+         (setf size path/size)))
+      (let ((addr (osicat-posix:mmap (cffi:null-pointer)
+                                     size
+                                     protection
+                                     mmap
+                                     fd
+                                     offset)))
+        (values addr fd size)))))
 
 (defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)))
   (%mmap (etypecase path
@@ -95,5 +92,7 @@
 
 (declaim (inline munmap))
 (defun munmap (addr fd size)
-  (osicat-posix:munmap addr size)
-  (when fd (osicat-posix:close fd)))
+  (with-translated-posix-failure
+    (osicat-posix:munmap addr size)
+    (when fd (osicat-posix:close fd)))
+  NIL)

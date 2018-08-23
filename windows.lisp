@@ -31,7 +31,7 @@
 (defconstant truncate-existing 5)
 
 (cffi:defctype wchar_t :uint16)
-(cffi:defctype handle :uint64 #+x86 :uint32)
+(cffi:defctype handle :pointer)
 (cffi:defctype lpsecurity-attributes :uint64 #+x86 :uint32)
 (cffi:defctype dword :uint32)
 (cffi:defctype size_t #+x86-64 :uint64 #+x86 :uint32)
@@ -63,6 +63,7 @@
   (file-offset-low dword)
   (number-of-bytes-to-map size_t))
 
+;; https://msdn.microsoft.com/en-us/library/windows/desktop/aa366882(v=vs.85).aspx
 (cffi:defcfun (unmap-view-of-file "UnmapViewOfFile") :boolean
   (base-address :pointer))
 
@@ -91,9 +92,7 @@
        (cffi:with-foreign-object (string 'wchar_t 256)
          (format-message (logior format-message-from-system format-message-ignore-inserts)
                          (cffi:null-pointer) errno 0 string 256 (cffi:null-pointer))
-         (error 'mmap-error
-                :format-control "Failed to mmap file (E~d):~%  ~a"
-                :format-arguments (list errno (cffi:foreign-string-to-lisp string :encoding :utf-16)))))))
+         (mmap-error errno (cffi:foreign-string-to-lisp string :encoding :utf-16))))))
 
 (declaim (inline %mmap))
 (defun %mmap (path/size open-access open-disposition open-flags protection map-access offset)
@@ -166,7 +165,7 @@
 (defun translate-open-flags (flags)
   (let ((flag file-attribute-normal))
     (set-flag flag flags :direct file-flag-no-buffering)
-    (set-flag flag flags :sync file-flag-write-through)))
+    (set-flag flag flags :file-sync file-flag-write-through)))
 
 (defun translate-protection-flags (flags)
   (cond ((flagp flags :write)
@@ -207,5 +206,6 @@
 (declaim (inline munmap))
 (defun munmap (addr fd size)
   (declare (ignore size))
-  (unmap-view-of-file addr)
-  (when fd (close-handle fd)))
+  (check-windows (unmap-view-of-file addr))
+  (when fd (check-windows (close-handle fd)))
+  NIL)

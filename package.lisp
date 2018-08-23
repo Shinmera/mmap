@@ -9,6 +9,8 @@
   (:use #:cl)
   (:export
    #:mmap-error
+   #:code
+   #:message
    #:mmap
    #:munmap
    #:with-mmap))

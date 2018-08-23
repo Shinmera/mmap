@@ -7,7 +7,13 @@
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
 (define-condition mmap-error (simple-error)
-  ())
+  ((code :initarg :code :reader code)
+   (message :initarg :message :reader message))
+  (:report (lambda (c s) (format s "Failed to mmap file (E~d):~%  ~a"
+                                 (code c) (message c)))))
+
+(defun mmap-error (code message)
+  (error 'mmap-error :code code :message message))
 
 (defun cfold (env form &rest vars)
   (if (loop for var in vars
@@ -29,8 +35,13 @@
 (defun munmap (addr fd size)
   (error "Platform not supported."))
 
-(defmacro with-mmap ((addr fd size path &rest args) &body body)
-  `(multiple-value-bind (,addr ,fd ,size) (mmap ,path ,@args)
-     (unwind-protect
-          (progn ,@body)
-       (munmap ,addr ,fd ,size))))
+(defmacro with-mmap ((addr size path/size &rest args) &body body)
+  (let ((addrg (gensym "ADDR"))
+        (fdg (gensym "FD"))
+        (sizeg (gensym "SIZE")))
+    `(multiple-value-bind (,addrg ,fdg ,sizeg) (mmap ,path/size ,@args)
+       (unwind-protect
+            (let ((,addr ,addrg)
+                  (,size ,sizeg))
+              ,@body)
+         (munmap ,addrg ,fdg ,sizeg)))))
