@@ -35,12 +35,14 @@ See MMAP-ERROR")
   (function mmap
     "Map the given path or number of bytes into the address space.
 
-PATH/SIZE can be either a pathname designator, or a fixnum. If it is a
-fixnum, an anonymous file is mapped and the MMAP flag list must include the
-flag :ANONYMOUS. If it is a path, then the contents of the given file on the
-file system are mapped into the address space. The file contents can then be
-read, written, or executed depending on the given flags as if normal memory
-was accessed.
+PATH can be either a pathname designator, or NIL. If it is NIL, an anonymous
+file is mapped and the MMAP flag list must include the flag :ANONYMOUS.
+If it is a path, then the contents of the given file on the file system are
+mapped into the address space. The file contents can then be read, written,
+or executed depending on the given flags as if normal memory was accessed.
+If the file is NIL or its size cannot be automatically determined, you must
+pass a valid SIZE. You may optionally pass an OFFSET (in bytes) into the
+file from which the mapping begins.
 
 If the map attempt fails, an error of type MMAP-ERROR is signalled.
 If the call succeeds, three values are returned:
@@ -57,7 +59,8 @@ change could cause severe issues.
 
 The three options OPEN, PROTECTION, and MMAP are lists of flags. Not all of
 those flags are portable, some are only allowed on Linux, some only on non-
-Windows systems. To indicate support, the flags are marked as EVERY, POSIX (non-Windows), LINUX, or WINDOWS.
+Windows systems. To indicate support, the flags are marked as EVERY, POSIX
+(non-Windows), LINUX, or WINDOWS.
 
 OPEN
 - READ          --- [EVERY] Opens the file for read access.
@@ -121,7 +124,15 @@ and immediately after call MPROTECT with (:READ).
 
 See MUNMAP
 See WITH-MMAP
-See MMAP-ERROR")
+See MMAP-ERROR
+See http://pubs.opengroup.org/onlinepubs/7908799/xsh/mmap.html
+See http://pubs.opengroup.org/onlinepubs/009604499/functions/stat.html
+See http://man7.org/linux/man-pages/man2/mmap.2.html
+See http://man7.org/linux/man-pages/man2/stat.2.html
+See https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilew
+See https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesize
+See https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
+See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366761(v=vs.85).aspx")
 
   (function munmap
     "Unmaps the memory region, freeing the address space and its file.
@@ -140,10 +151,17 @@ a problem.
 
 See MMAP
 See MMAP-ERROR
-See WITH-MMAP")
+See WITH-MMAP
+See http://pubs.opengroup.org/onlinepubs/9699919799/functions/mprotect.html
+See http://man7.org/linux/man-pages/man2/mprotect.2.html
+See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366882(v=vs.85).aspx
+See https://msdn.microsoft.com/en-us/library/windows/desktop/ms724211(v=vs.85).aspx")
 
   (function msync
     "Causes writes to the mapped file area to be written to disk.
+
+The values passed to this function must be the ones retrieved from a call
+to MMAP.
 
 The following flags are supported:
 
@@ -161,10 +179,17 @@ This function may signal an MMAP-ERROR in case the operating system notices
 a problem.
 
 See MMAP
-See MMAP-ERROR")
+See MMAP-ERROR
+See http://pubs.opengroup.org/onlinepubs/000095399/functions/msync.html
+See http://man7.org/linux/man-pages/man2/msync.2.html
+See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366563(v=vs.85).aspx
+See https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-flushfilebuffers")
 
   (function mprotect
     "Changes the access protection of the mapped memory region.
+
+The values passed to this function must be the ones retrieved from a call
+to MMAP.
 
 The following protection flags are supported:
 
@@ -181,7 +206,10 @@ This function may signal an MMAP-ERROR in case the operating system notices
 a problem.
 
 See MMAP
-See MMAP-ERROR")
+See MMAP-ERROR
+See http://pubs.opengroup.org/onlinepubs/9699919799/functions/mprotect.html
+See http://man7.org/linux/man-pages/man2/mprotect.2.html
+See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx")
 
   (macro with-mmap
     "Map the file or number of bytes to a memory region within the body.
