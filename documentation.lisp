@@ -60,59 +60,62 @@ change could cause severe issues.
 The three options OPEN, PROTECTION, and MMAP are lists of flags. Not all of
 those flags are portable, some are only allowed on Linux, some only on non-
 Windows systems. To indicate support, the flags are marked as EVERY, POSIX
-(non-Windows), LINUX, or WINDOWS.
+\(non-Windows), LINUX, or WINDOWS.
 
 OPEN
-- READ          --- [EVERY] Opens the file for read access.
-- WRITE         --- [EVERY] Opens the file for write access.
-- CREATE        --- [EVERY] Creates the file if it does not exist yet.
-- ENSURE-CREATE --- [EVERY] Creates the file if it does not exist yet and
+ :READ          --- [EVERY] Opens the file for read access.
+ :WRITE         --- [EVERY] Opens the file for write access.
+ :CREATE        --- [EVERY] Creates the file if it does not exist yet.
+ :ENSURE-CREATE --- [EVERY] Creates the file if it does not exist yet and
                             errors if it does.
-- TRUNCATE      --- [EVERY] Truncates the file and replaces it if it exists.
-- DIRECT        --- [EVERY] Causes system buffers to be bypassed.
-- FILE-SYNC     --- [EVERY] Causes writes to the file to be flushed asap.
-- DATA-SYNC     --- [POSIX] Similar to FILE-SYNC, but uses data integrity
+ :TRUNCATE      --- [EVERY] Truncates the file and replaces it if it exists.
+ :DIRECT        --- [EVERY] Causes system buffers to be bypassed.
+ :FILE-SYNC     --- [EVERY] Causes writes to the file to be flushed asap.
+ :DATA-SYNC     --- [POSIX] Similar to FILE-SYNC, but uses data integrity
                             semantics rather than file integrity semantics.
-- DONT-CLAIM-TTY--- [POSIX] If the file is a tty and the process does not
+ :DONT-CLAIM-TTY--- [POSIX] If the file is a tty and the process does not
                             already have a controlling tty, this file will
                             not become the process' controlling tty.
-- NON-BLOCK     --- [POSIX] Attempt to open the file in non-blocking mode,
+ :NON-BLOCK     --- [POSIX] Attempt to open the file in non-blocking mode,
                             causing operations on the fd to return asap.
-- NO-FOLLOW     --- [LINUX] Errors if the file is a symlink.
-- ASYNC         --- [LINUX] Enable signal driven IO.
-- DIRECTORY     --- [LINUX] Errors if the file is not a directory.
-- LARGE-FILE    --- [LINUX] Allows opening files with size not representable
+ :NO-FOLLOW     --- [LINUX] Errors if the file is a symlink.
+ :ASYNC         --- [LINUX] Enable signal driven IO.
+ :DIRECTORY     --- [LINUX] Errors if the file is not a directory.
+ :LARGE-FILE    --- [LINUX] Allows opening files with size not representable
                             by a 32 bit unsigned integer.
 
 PROTECTION
-- READ          --- [EVERY] Allows reading from the memory region. The OPEN
+ :READ          --- [EVERY] Allows reading from the memory region. The OPEN
                             flag :READ is required for this protection mode.
                             This flag is required on windows.
-- WRITE         --- [EVERY] Allows writing to the memory region.
-- EXEC          --- [EVERY] Allows executing code in the memory region.
-- NONE          --- [POSIX] Prevents accessing the memory region.
+ :WRITE         --- [EVERY] Allows writing to the memory region.
+ :EXEC          --- [EVERY] Allows executing code in the memory region.
+ :NONE          --- [POSIX] Prevents accessing the memory region.
 
 MMAP
-- PRIVATE       --- [EVERY] The underlying file is not changed if the memory
+ :PRIVATE       --- [EVERY] The underlying file is not changed if the memory
                             area is written to. Copy-on-write is employed to
                             ensure separation.
-- SHARED        --- [EVERY] The underlying file is changed if the memory
+ :SHARED        --- [EVERY] The underlying file is changed if the memory
                             area is written to and the change will be
                             visible to other processes. In this case the
                             OPEN flag :WRITE must be specified.
-- ANONYMOUS     --- [LINUX/WINDOWS] The path should be a number of bytes to
+ :ANONYMOUS     --- [LINUX/WINDOWS] The path should be a number of bytes to
                             map to memory. The memory region is then mapped
                             against an \"anonymous\" file.
-- NO-RESERVE    --- [LINUX] Don't reserve swap for this mapping. If memory
+ :NO-RESERVE    --- [LINUX] Don't reserve swap for this mapping. If memory
                             runs out, a segfault will be generated instead.
-- LOCKED        --- [LINUX] Locks the region to RAM, preventing it from
+ :LOCKED        --- [LINUX] Locks the region to RAM, preventing it from
                             being swapped out.
-- GROWS-DOWN    --- [LINUX] Causes the memory region to be mapped with a
+ :GROWS-DOWN    --- [LINUX] Causes the memory region to be mapped with a
                             decreasing address, like in a stack.
-- POPULATE      --- [LINUX] Pre-populate the memory region with the file
+ :POPULATE      --- [LINUX] Pre-populate the memory region with the file
                             contents, which can help performance.
-- NON-BLOCK     --- [LINUX] Only useful with :POPULATE -- do not perform a
+ :NON-BLOCK     --- [LINUX] Only useful with :POPULATE -- do not perform a
                             read-ahead.
+
+The default values for the flags are:
+ :OPEN (:READ) :PROTECTION (:READ) :MMAP (:PRIVATE)
 
 Note that if you are intending to use MPROTECT to change the protection of
 the mapped file at a later date, you need to call MMAP with the maximal
@@ -165,12 +168,12 @@ to MMAP.
 
 The following flags are supported:
 
-- SYNC          --- [EVERY] Writing is synchronous. A call to this function 
+ :SYNC          --- [EVERY] Writing is synchronous. A call to this function 
                             will not return until the data is flushed to
                             disk.
-- ASYNC         --- [EVERY] Writing is asynchronous and a call will return
+ :ASYNC         --- [EVERY] Writing is asynchronous and a call will return
                             immediately.
-- INVALIDATE    --- [POSIX] Asks to invalidate other mappings of the same
+ :INVALIDATE    --- [POSIX] Asks to invalidate other mappings of the same
                             file, ensuring the view is synchronised.
 
 This function returns nothing useful.
@@ -193,12 +196,12 @@ to MMAP.
 
 The following protection flags are supported:
 
-- READ          --- [EVERY] Allows reading from the memory region. The OPEN
+ :READ          --- [EVERY] Allows reading from the memory region. The OPEN
                             flag :READ is required for this protection mode.
                             This flag is required on windows.
-- WRITE         --- [EVERY] Allows writing to the memory region.
-- EXEC          --- [EVERY] Allows executing code in the memory region.
-- NONE          --- [POSIX] Prevents accessing the memory region.
+ :WRITE         --- [EVERY] Allows writing to the memory region.
+ :EXEC          --- [EVERY] Allows executing code in the memory region.
+ :NONE          --- [POSIX] Prevents accessing the memory region.
 
 This function returns nothing useful.
 
@@ -211,7 +214,7 @@ See http://pubs.opengroup.org/onlinepubs/9699919799/functions/mprotect.html
 See http://man7.org/linux/man-pages/man2/mprotect.2.html
 See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx")
 
-  (macro with-mmap
+  (function with-mmap
     "Map the file or number of bytes to a memory region within the body.
 
 This is a convenience macro that calls MMAP with the given arguments,

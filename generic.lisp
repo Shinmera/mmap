@@ -12,7 +12,7 @@
   (:report (lambda (c s) (format s "Failed to mmap file (E~d):~%  ~a"
                                  (code c) (message c)))))
 
-(defun mmap-error (code message)
+(defun error-mmap (code message)
   (error 'mmap-error :code code :message message))
 
 (defun cfold (env form &rest vars)
@@ -42,13 +42,15 @@
 (defun mprotect (addr size protection)
   (error "Platform not supported."))
 
-(defmacro with-mmap ((addr size path &rest args) &body body)
+(defmacro with-mmap ((addr fd size path &rest args) &body body)
   (let ((addrg (gensym "ADDR"))
         (fdg (gensym "FD"))
         (sizeg (gensym "SIZE")))
     `(multiple-value-bind (,addrg ,fdg ,sizeg) (mmap ,path ,@args)
        (unwind-protect
             (let ((,addr ,addrg)
+                  (,fd ,fdg)
                   (,size ,sizeg))
+              (declare (ignorable ,fd ,size))
               ,@body)
          (munmap ,addrg ,fdg ,sizeg)))))

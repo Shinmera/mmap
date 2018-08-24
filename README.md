@@ -11,7 +11,7 @@ The library offers access to the following functions:
 
 It also provides a convenience macro called `with-mmap` to perform safe, local mappings of files.
 
-    (mmap:with-mmap (addr size #p"/etc/lsb-release")
+    (mmap:with-mmap (addr fd size #p"/etc/lsb-release")
       (with-output-to-string (out)
         (loop for i from 0 below size
               for char = (code-char (cffi:mem-aref addr :char i))

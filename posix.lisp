@@ -55,7 +55,7 @@
 (defmacro with-translated-posix-failure (&body body)
   `(handler-bind ((osicat:system-error
                     (lambda (e)
-                      (mmap-error (osicat:system-error-code e)
+                      (error-mmap (osicat:system-error-code e)
                                   (strerror (osicat:system-error-code e))))))
      ,@body))
 

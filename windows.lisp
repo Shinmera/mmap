@@ -108,7 +108,7 @@
        (cffi:with-foreign-object (string 'wchar_t 256)
          (format-message (logior format-message-from-system format-message-ignore-inserts)
                          (cffi:null-pointer) errno 0 string 256 (cffi:null-pointer))
-         (mmap-error errno (cffi:foreign-string-to-lisp string :encoding :utf-16))))))
+         (error-mmap errno (cffi:foreign-string-to-lisp string :encoding :utf-16))))))
 
 (declaim (inline %mmap))
 (defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
