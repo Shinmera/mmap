@@ -111,6 +111,14 @@ MMAP
 - NON-BLOCK     --- [LINUX] Only useful with :POPULATE -- do not perform a
                             read-ahead.
 
+Note that if you are intending to use MPROTECT to change the protection of
+the mapped file at a later date, you need to call MMAP with the maximal
+combination of protection flags first. If this is not the protection that
+you want to start out with, call MPROTECT with the correct combination
+immediately after. For instance, if you would like to start with (:READ) and
+later want to change it to (:READ :WRITE), call MMAP with (:READ :WRITE),
+and immediately after call MPROTECT with (:READ).
+
 See MUNMAP
 See WITH-MMAP
 See MMAP-ERROR")
@@ -133,6 +141,47 @@ a problem.
 See MMAP
 See MMAP-ERROR
 See WITH-MMAP")
+
+  (function msync
+    "Causes writes to the mapped file area to be written to disk.
+
+The following flags are supported:
+
+- SYNC          --- [EVERY] Writing is synchronous. A call to this function 
+                            will not return until the data is flushed to
+                            disk.
+- ASYNC         --- [EVERY] Writing is asynchronous and a call will return
+                            immediately.
+- INVALIDATE    --- [POSIX] Asks to invalidate other mappings of the same
+                            file, ensuring the view is synchronised.
+
+This function returns nothing useful.
+
+This function may signal an MMAP-ERROR in case the operating system notices
+a problem.
+
+See MMAP
+See MMAP-ERROR")
+
+  (function mprotect
+    "Changes the access protection of the mapped memory region.
+
+The following protection flags are supported:
+
+- READ          --- [EVERY] Allows reading from the memory region. The OPEN
+                            flag :READ is required for this protection mode.
+                            This flag is required on windows.
+- WRITE         --- [EVERY] Allows writing to the memory region.
+- EXEC          --- [EVERY] Allows executing code in the memory region.
+- NONE          --- [POSIX] Prevents accessing the memory region.
+
+This function returns nothing useful.
+
+This function may signal an MMAP-ERROR in case the operating system notices
+a problem.
+
+See MMAP
+See MMAP-ERROR")
 
   (macro with-mmap
     "Map the file or number of bytes to a memory region within the body.

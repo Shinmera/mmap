@@ -28,11 +28,19 @@
     (fixnum path/size)))
 
 #-(or unix windows)
-(defun mmap (path &rest args)
+(defun mmap (path &key open protection mmap)
   (error "Platform not supported."))
 
 #-(or unix windows)
 (defun munmap (addr fd size)
+  (error "Platform not supported."))
+
+#-(or unix windows)
+(defun msync (addr size &key flags)
+  (error "Platform not supported."))
+
+#-(or unix windows)
+(defun mprotect (addr size protection)
   (error "Platform not supported."))
 
 (defmacro with-mmap ((addr size path/size &rest args) &body body)
@@ -45,6 +53,3 @@
                   (,size ,sizeg))
               ,@body)
          (munmap ,addrg ,fdg ,sizeg)))))
-
-;; FIXME: msync?
-;; FIXME: mprotect?

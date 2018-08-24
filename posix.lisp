@@ -24,6 +24,12 @@
     (:populate osicat-posix:map-populate)
     (:non-block osicat-posix:map-nonblock)))
 
+(defun msync-flag (flag)
+  (ecase flag
+    (:sync osicat-posix:ms-sync)
+    (:async osicat-posix:ms-async)
+    (:invalidate osicat-posix:ms-invalidate)))
+
 (defun fopen-flag (flag)
   (ecase flag
     (:read osicat-posix:o-rdonly)
@@ -88,9 +94,30 @@
           ,(cfold env `(reduce #'logior ,protection :key #'protection-flag) protection)
           ,(cfold env `(reduce #'logior ,mmap :key #'mmap-flag) mmap)))
 
-(declaim (inline munmap))
 (defun munmap (addr fd size)
   (with-translated-posix-failure
     (osicat-posix:munmap addr size)
-    (when fd (osicat-posix:close fd)))
-  NIL)
+    (when fd (osicat-posix:close fd))
+    NIL))
+
+(defun msync (addr fd size &key (flags '(:sync)))
+  (declare (ignore fd))
+  (with-translated-posix-failure
+    (osicat-posix:msync addr size (reduce #'logior flags :key #'msync-flag))
+    NIL))
+
+(define-compiler-macro msync (&environment env addr fd size &key (flags ''(:sync)))
+  (declare (ignore fd))
+  `(with-translated-posix-failure
+     (osicat-posix:msync ,addr ,size ,(cfold env `(reduce #'logior ,flags :key #'msync-flag)) flags)
+     NIL))
+
+(defun mprotect (addr size protection)
+  (with-translated-posix-failure
+    (osicat-posix:mprotect addr size (reduce #'logior protection :key #'protection-flag))
+    NIL))
+
+(define-compiler-macro mprotect (&environment env addr size protection)
+  `(with-translated-posix-failure
+     (osicat-posix:mprotect ,addr ,size ,(cfold env `(reduce #'logior ,protection :key #'protection-flag) protection))
+     NIL))

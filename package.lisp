@@ -13,4 +13,6 @@
    #:message
    #:mmap
    #:munmap
+   #:msync
+   #:mprotect
    #:with-mmap))

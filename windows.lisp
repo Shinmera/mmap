@@ -46,6 +46,11 @@
   (flags-and-attributes dword)
   (template-file handle))
 
+;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesize
+(cffi:defcfun (get-file-size "GetFileSize") dword
+  (file handle)
+  (file-size-high :pointer))
+
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
 (cffi:defcfun (create-file-mapping "CreateFileMappingA") handle
   (file handle)
@@ -54,6 +59,9 @@
   (maximum-size-high dword)
   (maximum-size-low dword)
   (name :pointer))
+
+(cffi:defcfun (close-handle "CloseHandle") :boolean
+  (object handle))
 
 ;; https://msdn.microsoft.com/en-us/library/windows/desktop/aa366761(v=vs.85).aspx
 (cffi:defcfun (map-view-of-file "MapViewOfFile") :pointer
@@ -67,15 +75,21 @@
 (cffi:defcfun (unmap-view-of-file "UnmapViewOfFile") :boolean
   (base-address :pointer))
 
-(cffi:defcfun (close-handle "CloseHandle") :boolean
-  (object handle))
+;; https://msdn.microsoft.com/en-us/library/windows/desktop/aa366563(v=vs.85).aspx
+(cffi:defcfun (flush-view-of-file "FlushViewOfFile") :boolean
+  (base-address :pointer)
+  (number-of-bytes-to-flush size_t))
 
-;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesize
-(cffi:defcfun (get-file-size "GetFileSize") dword
-  (file handle)
-  (file-size-high :pointer))
+;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-flushfilebuffers
+(cffi:defcfun (flush-file-buffers "FlushFileBuffers") :boolean
+  (file handle))
 
 ;; https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx
+(cffi:defcfun (virtual-protect "VirtualProtect") :boolean
+  (address :pointer)
+  (size size_t)
+  (new-protect dword)
+  (old-protect :pointer))
 
 (cffi:defcfun (get-last-error "GetLastError") dword)
 
@@ -209,9 +223,24 @@
           ,(cfold env `(translate-access-flags ,protection ,mmap) protection mmap)
           ,offset))
 
-(declaim (inline munmap))
 (defun munmap (addr fd size)
   (declare (ignore size))
   (check-windows (unmap-view-of-file addr))
   (when fd (check-windows (close-handle fd)))
   NIL)
+
+(defun msync (addr fd size &key (flags '(:sync)))
+  (check-windows (flush-view-of-file addr size))
+  (when (find :sync flags)
+    (check-windows (flush-file-buffers fd)))
+  NIL)
+
+(defun mprotect (addr size protection)
+  (cffi:with-foreign-object (oldprotect 'dword)
+    (check-windows (virtual-protect addr size (translate-protection-flags protection) oldprotect))
+    NIL))
+
+(define-compiler-macro mprotect (&environment env addr size protection)
+  `(cffi:with-foreign-object (oldprotect 'dword)
+     (check-windows (virtual-protect ,addr ,size ,(cfold env `(translate-protection-flags ,protection) protection) oldprotect))
+     NIL))
