@@ -36,7 +36,7 @@
 (cffi:defctype dword :uint32)
 (cffi:defctype size_t #+x86-64 :uint64 #+x86 :uint32)
 
-;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilea
+;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilew
 (cffi:defcfun (create-file "CreateFileW") handle
   (path :pointer)
   (access dword)
@@ -111,15 +111,14 @@
          (mmap-error errno (cffi:foreign-string-to-lisp string :encoding :utf-16))))))
 
 (declaim (inline %mmap))
-(defun %mmap (path/size open-access open-disposition open-flags protection map-access offset)
+(defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
   (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
-  (let ((fd invalid-handle-value)
-        (size 0))
+  (let ((fd invalid-handle-value))
     (declare (type (unsigned-byte 64) fd size))
-    (etypecase path/size
+    (etypecase path
       (string
-       (cffi:with-foreign-string (string path/size :encoding :utf-16)
+       (cffi:with-foreign-string (string path :encoding :utf-16)
          (setf fd (create-file string
                                open-access
                                (logior file-share-delete
@@ -130,13 +129,13 @@
                                open-flags
                                0)))
        (check-windows (/= fd invalid-handle-value))
-       (cffi:with-foreign-object (high 'dword)
-         (let ((low (get-file-size fd high)))
-           (declare (type (unsigned-byte 16) low))
-           (check-windows (/= low invalid-file-size))
-           (setf size (+ low (ash (cffi:mem-ref high 'dword) 16))))))
-      (fixnum
-       (setf size path/size)))
+       (unless size
+         (cffi:with-foreign-object (high 'dword)
+           (let ((low (get-file-size fd high)))
+             (declare (type (unsigned-byte 16) low))
+             (check-windows (/= low invalid-file-size))
+             (setf size (+ low (ash (cffi:mem-ref high 'dword) 16)))))))
+      (null))
     (let* ((end (+ size offset))
            (handle (create-file-mapping fd
                                         0
@@ -205,23 +204,23 @@
       (error "MMAP flags must include either :PRIVATE or :SHARED."))
     flag))
 
-(defun mmap (path/size &key (open '(:read)) (protection '(:read)) (mmap '(:private)) (offset 0))
-  (%mmap (translate-path/size path/size)
+(defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)) size (offset 0))
+  (%mmap (translate-path path)
+         size offset
          (translate-open-access open)
          (translate-open-disposition open)
          (translate-open-flags open)
          (translate-protection-flags protection)
-         (translate-access-flags protection mmap)
-         offset))
+         (translate-access-flags protection mmap)))
 
-(define-compiler-macro mmap (&environment env path/size &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)) (offset 0))
-  `(%mmap ,(cfold env `(translate-path/size ,path/size) path/size)
+(define-compiler-macro mmap (&environment env path &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)) size (offset 0))
+  `(%mmap ,(cfold env `(translate-path ,path) path)
+          ,size ,offset
           ,(cfold env `(translate-open-access ,open) open)
           ,(cfold env `(translate-open-disposition ,open) open)
           ,(cfold env `(translate-open-flags ,open) open)
           ,(cfold env `(translate-protection-flags ,protection) protection)
-          ,(cfold env `(translate-access-flags ,protection ,mmap) protection mmap)
-          ,offset))
+          ,(cfold env `(translate-access-flags ,protection ,mmap) protection mmap)))
 
 (defun munmap (addr fd size)
   (declare (ignore size))

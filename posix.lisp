@@ -56,40 +56,45 @@
   `(handler-bind ((osicat:system-error
                     (lambda (e)
                       (mmap-error (osicat:system-error-code e)
-                                  (osicat:system-error-message e)))))
+                                  (strerror (osicat:system-error-code e))))))
      ,@body))
 
-(declaim (inline %mmap))
-(defun %mmap (path/size open protection mmap offset)
+(declaim (notinline %mmap))
+(defun %mmap (path size offset open protection mmap)
   (declare (type fixnum open protection mmap))
   (declare (optimize speed))
   (with-translated-posix-failure
-    (let (fd size)
-      (etypecase path/size
+    (let ((fd -1))
+      (etypecase path
         (string
-         (setf fd (osicat-posix:open path/size open))
-         (setf size (osicat-posix:stat-size (osicat-posix:fstat fd))))
-        (fixnum
-         (setf fd -1)
-         (setf size path/size)))
-      (let ((addr (osicat-posix:mmap (cffi:null-pointer)
-                                     size
-                                     protection
-                                     mmap
-                                     fd
-                                     offset)))
-        (values addr fd size)))))
+         (setf fd (osicat-posix:open path open))
+         (unless size
+           (setf size (osicat-posix:stat-size (osicat-posix:fstat fd)))))
+        (null))
+      (handler-bind ((error (lambda (e)
+                              (declare (ignore e))
+                              (when (/= fd -1)
+                                (osicat-posix:close fd)))))
+        (let ((addr (osicat-posix:mmap (cffi:null-pointer)
+                                       size
+                                       protection
+                                       mmap
+                                       fd
+                                       offset)))
+          (values addr fd size))))))
 
-(defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)))
+(defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)) size (offset 0))
   (%mmap (etypecase path
            (string path)
            (pathname (uiop:native-namestring path)))
+         size offset
          (reduce #'logior open :key #'fopen-flag)
          (reduce #'logior protection :key #'protection-flag)
          (reduce #'logior mmap :key #'mmap-flag)))
 
-(define-compiler-macro mmap (&environment env path/size &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)))
-  `(%mmap ,(cfold env `(translate-path/size ,path/size) path/size)
+(define-compiler-macro mmap (&environment env path &key (open ''(:read)) (protection ''(:read)) (mmap ''(:private)) size (offset 0))
+  `(%mmap ,(cfold env `(translate-path ,path) path)
+          ,size ,offset
           ,(cfold env `(reduce #'logior ,open :key #'fopen-flag) open)
           ,(cfold env `(reduce #'logior ,protection :key #'protection-flag) protection)
           ,(cfold env `(reduce #'logior ,mmap :key #'mmap-flag) mmap)))

@@ -21,11 +21,10 @@
       `(load-time-value ,form)
       form))
 
-(defun translate-path/size (path/size)
-  (etypecase path/size
-    (string path/size)
-    (pathname (uiop:native-namestring path/size))
-    (fixnum path/size)))
+(defun translate-path (path)
+  (etypecase path
+    (string path)
+    (pathname (uiop:native-namestring path))))
 
 #-(or unix windows)
 (defun mmap (path &key open protection mmap)
@@ -43,11 +42,11 @@
 (defun mprotect (addr size protection)
   (error "Platform not supported."))
 
-(defmacro with-mmap ((addr size path/size &rest args) &body body)
+(defmacro with-mmap ((addr size path &rest args) &body body)
   (let ((addrg (gensym "ADDR"))
         (fdg (gensym "FD"))
         (sizeg (gensym "SIZE")))
-    `(multiple-value-bind (,addrg ,fdg ,sizeg) (mmap ,path/size ,@args)
+    `(multiple-value-bind (,addrg ,fdg ,sizeg) (mmap ,path ,@args)
        (unwind-protect
             (let ((,addr ,addrg)
                   (,size ,sizeg))
