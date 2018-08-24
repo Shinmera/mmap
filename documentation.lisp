@@ -218,11 +218,12 @@ See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).a
     "Map the file or number of bytes to a memory region within the body.
 
 This is a convenience macro that calls MMAP with the given arguments,
-binds the results to the variables ADDR and SIZE, and automatically ensures
-that MUNMAP is called with the correct values when the body is exited.
+binds the results to the variables ADDR, FD, and SIZE, and automatically
+ensures that MUNMAP is called with the correct values when the body is
+exited.
 
-It is safe to change the ADDR and SIZE bindings, though probably not very
-good style to do so. It is NOT safe to save the ADDR and SIZE values
+It is safe to change the ADDR, FD, and SIZE bindings, though probably not
+very good style to do so. It is NOT safe to save the ADDR and SIZE values
 somewhere and use them outside of the dynamic scope of the body. Attempting
 to do so is very likely going to burn your process to the ground.
 
