@@ -22,4 +22,5 @@
   :defsystem-depends-on (:trivial-features)
   :depends-on (:documentation-utils
                :cffi
-               (:feature :unix :osicat)))
+               (:feature :unix :osicat))
+  :in-order-to ((asdf:test-op (asdf:test-op :mmap-test))))
