@@ -7,6 +7,7 @@
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
 (defconstant create-new 1)
+(defconstant file-attribute-normal 128)
 (defconstant file-flag-no-buffering 536870912)
 (defconstant file-flag-write-through 2147483648)
 (defconstant file-map-copy 1)
@@ -21,7 +22,10 @@
 (defconstant generic-read 2147483648)
 (defconstant generic-write 1073741824)
 (defconstant invalid-file-size 4294967295)
-(defconstant invalid-handle-value 4294967295)
+(defconstant invalid-handle-value
+  (if (boundp 'invalid-handle-value)
+      invalid-handle-value
+      (cffi:make-pointer 4294967295)))
 (defconstant open-always 4)
 (defconstant open-existing 3)
 (defconstant page-execute-read 32)
@@ -115,7 +119,8 @@
   (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
   (let ((fd invalid-handle-value))
-    (declare (type (unsigned-byte 64) fd size))
+    (declare (type (or null (unsigned-byte 64)) size))
+    (declare (type cffi:foreign-pointer fd))
     (etypecase path
       (string
        (cffi:with-foreign-string (string path :encoding :utf-16)
@@ -128,7 +133,7 @@
                                open-disposition
                                open-flags
                                0)))
-       (check-windows (/= fd invalid-handle-value))
+       (check-windows (cffi:pointer-eq fd invalid-handle-value))
        (unless size
          (cffi:with-foreign-object (high 'dword)
            (let ((low (get-file-size fd high)))
@@ -136,7 +141,7 @@
              (check-windows (/= low invalid-file-size))
              (setf size (+ low (ash (cffi:mem-ref high 'dword) 16)))))))
       (null))
-    (let* ((end (+ size offset))
+    (let* ((end (+ (the (unsigned-byte 64) size) offset))
            (handle (create-file-mapping fd
                                         0
                                         protection
