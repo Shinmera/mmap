@@ -38,6 +38,7 @@
 (cffi:defctype handle :pointer)
 (cffi:defctype lpsecurity-attributes :uint64 #+x86 :uint32)
 (cffi:defctype dword :uint32)
+(cffi:defctype large-integer :uint64)
 (cffi:defctype size_t #+x86-64 :uint64 #+x86 :uint32)
 
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-createfilew
@@ -51,9 +52,9 @@
   (template-file handle))
 
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/fileapi/nf-fileapi-getfilesize
-(cffi:defcfun (get-file-size "GetFileSize") dword
+(cffi:defcfun (get-file-size-ex "GetFileSizeEx") :boolean
   (file handle)
-  (file-size-high :pointer))
+  (file-size :pointer))
 
 ;; https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-createfilemappinga
 (cffi:defcfun (create-file-mapping "CreateFileMappingA") handle
@@ -112,7 +113,10 @@
        (cffi:with-foreign-object (string 'wchar_t 256)
          (format-message (logior format-message-from-system format-message-ignore-inserts)
                          (cffi:null-pointer) errno 0 string 256 (cffi:null-pointer))
-         (error-mmap errno (cffi:foreign-string-to-lisp string :encoding :utf-16))))))
+         ;; cffi defaults to BE when decoding without BOM, so specify
+         ;; LE. Not sure if that is correct for BE windows systems if
+         ;; they exist?
+         (error-mmap errno (cffi:foreign-string-to-lisp string :encoding :utf-16le))))))
 
 (declaim (inline %mmap))
 (defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
@@ -132,32 +136,32 @@
                                0
                                open-disposition
                                open-flags
-                               0)))
-       (check-windows (cffi:pointer-eq fd invalid-handle-value))
+                               (cffi:null-pointer))))
+       (check-windows (not (cffi:pointer-eq fd invalid-handle-value)))
        (unless size
-         (cffi:with-foreign-object (high 'dword)
-           (let ((low (get-file-size fd high)))
-             (declare (type (unsigned-byte 16) low))
-             (check-windows (/= low invalid-file-size))
-             (setf size (+ low (ash (cffi:mem-ref high 'dword) 16)))))))
+         (cffi:with-foreign-object (tmp 'large-integer)
+           (let ((ret (get-file-size-ex fd tmp)))
+             (check-windows ret)
+             (setf size (cffi:mem-ref tmp 'large-integer))))))
       (null))
     (let* ((end (+ (the (unsigned-byte 64) size) offset))
            (handle (create-file-mapping fd
                                         0
                                         protection
-                                        (ldb (byte 16 16) end)
-                                        (ldb (byte 16 0) end)
+                                        (ldb (byte 32 32) end)
+                                        (ldb (byte 32 0) end)
                                         (cffi:null-pointer)))
-           (success (map-view-of-file handle
+           (pointer (map-view-of-file handle
                                       map-access
-                                      (ldb (byte 16 16) offset)
-                                      (ldb (byte 16 0) offset)
+                                      (ldb (byte 32 32) offset)
+                                      (ldb (byte 32 0) offset)
                                       size)))
+      (declare (type (unsigned-byte 64) end))
       (handler-bind ((mmap-error (lambda (e)
                                    (declare (ignore e))
                                    (close-handle handle))))
-        (check-windows success)
-        (values handle fd size)))))
+        (check-windows (not (cffi:null-pointer-p pointer)))
+        (values pointer fd size)))))
 
 (defun flagp (flags &rest tests)
   (loop for test in tests
@@ -185,7 +189,8 @@
 (defun translate-open-flags (flags)
   (let ((flag file-attribute-normal))
     (set-flag flag flags :direct file-flag-no-buffering)
-    (set-flag flag flags :file-sync file-flag-write-through)))
+    (set-flag flag flags :file-sync file-flag-write-through)
+    flag))
 
 (defun translate-protection-flags (flags)
   (cond ((flagp flags :write)
