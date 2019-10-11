@@ -21,6 +21,5 @@
                (:file "documentation"))
   :defsystem-depends-on (:trivial-features)
   :depends-on (:documentation-utils
-               :cffi
-               (:feature :unix :osicat))
+               :cffi)
   :in-order-to ((asdf:test-op (asdf:test-op :mmap-test))))
