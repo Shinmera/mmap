@@ -36,7 +36,7 @@
 
 (cffi:defctype wchar_t :uint16)
 (cffi:defctype handle :pointer)
-(cffi:defctype lpsecurity-attributes :uint64 #+x86 :uint32)
+(cffi:defctype lpsecurity-attributes :pointer)
 (cffi:defctype dword :uint32)
 (cffi:defctype large-integer :uint64)
 (cffi:defctype size_t #+x86-64 :uint64 #+x86 :uint32)
@@ -134,7 +134,7 @@
                                (logior file-share-delete
                                        file-share-read
                                        file-share-write)
-                               0
+                               (cffi:null-pointer)
                                open-disposition
                                open-flags
                                (cffi:null-pointer))))
@@ -147,7 +147,7 @@
       (null))
     (let* ((end (+ (the (unsigned-byte 64) size) offset))
            (handle (create-file-mapping fd
-                                        0
+                                        (cffi:null-pointer)
                                         protection
                                         (ldb (byte 32 32) end)
                                         (ldb (byte 32 0) end)
