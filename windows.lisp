@@ -22,10 +22,10 @@
 (defconstant generic-read 2147483648)
 (defconstant generic-write 1073741824)
 (defconstant invalid-file-size 4294967295)
-(defconstant invalid-handle-value
-  (if (boundp 'invalid-handle-value)
-      invalid-handle-value
-      (cffi:make-pointer 4294967295)))
+;; ccl doesn't like constant pointers in middle of address space, so
+;; store INVALID-HANDLE-VALUE as an integer
+(defconstant invalid-handle-value 4294967295)
+
 (defconstant open-always 4)
 (defconstant open-existing 3)
 (defconstant page-execute-read 32)
@@ -122,7 +122,8 @@
 (defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
   (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
-  (let ((fd invalid-handle-value))
+  (let* ((invalid-fd (cffi:make-pointer invalid-handle-value))
+         (fd invalid-fd))
     (declare (type (or null (unsigned-byte 64)) size))
     (declare (type cffi:foreign-pointer fd))
     (etypecase path
@@ -137,7 +138,7 @@
                                open-disposition
                                open-flags
                                (cffi:null-pointer))))
-       (check-windows (not (cffi:pointer-eq fd invalid-handle-value)))
+       (check-windows (not (cffi:pointer-eq fd invalid-fd)))
        (unless size
          (cffi:with-foreign-object (tmp 'large-integer)
            (let ((ret (get-file-size-ex fd tmp)))
