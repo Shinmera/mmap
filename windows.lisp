@@ -195,7 +195,7 @@
     flag))
 
 (defun translate-protection-flags (flags)
-  (cond ((flagp flags :write)
+  (cond ((flagp flags :write :exec)
          page-execute-readwrite)
         ((flagp flags :write)
          page-readwrite)
