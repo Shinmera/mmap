@@ -175,7 +175,8 @@
 
 (defun translate-open-access (flags)
   (let ((flag 0))
-    (set-flag flag flags :read generic-read)
+    (or (set-flag flag flags :read generic-read)
+        (error "OPEN flags must include :READ."))
     (set-flag flag flags :write generic-write)
     flag))
 
@@ -195,9 +196,9 @@
     flag))
 
 (defun translate-protection-flags (flags)
-  (cond ((flagp flags :write :exec)
+  (cond ((flagp flags :read :write :exec)
          page-execute-readwrite)
-        ((flagp flags :write)
+        ((flagp flags :read :write)
          page-readwrite)
         ((flagp flags :read :exec)
          page-execute-read)
