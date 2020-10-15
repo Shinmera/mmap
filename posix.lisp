@@ -55,8 +55,8 @@
   #+32-bit :uint32)
 
 (cffi:defctype offset-t
-  #+64-bit :int64
-  #+32-bit :int32)
+  #+(or 64-bit bsd) :int64
+  #-(or 64-bit bsd) :int32)
 
 (cffi:defcfun strerror :string
   (errnum :int))
