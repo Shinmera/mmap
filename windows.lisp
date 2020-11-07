@@ -161,9 +161,11 @@
       (declare (type (unsigned-byte 64) end))
       (handler-bind ((mmap-error (lambda (e)
                                    (declare (ignore e))
-                                   (close-handle handle))))
+                                   (close-handle handle)
+                                   (unless (cffi:pointer-eq invalid-handle-value fd)
+                                     (close-handle fd)))))
         (check-windows (not (cffi:null-pointer-p pointer)))
-        (values pointer fd size)))))
+        (values pointer (cons fd handle) size)))))
 
 (defun flagp (flags &rest tests)
   (loop for test in tests
@@ -238,13 +240,16 @@
 (defun munmap (addr fd size)
   (declare (ignore size))
   (check-windows (unmap-view-of-file addr))
-  (when fd (check-windows (close-handle fd)))
+  (when fd
+    (destructuring-bind (fd . handle) fd
+      (check-windows (close-handle handle))
+      (check-windows (close-handle fd))))
   NIL)
 
 (defun msync (addr fd size &key (flags '(:sync)))
   (check-windows (flush-view-of-file addr size))
   (when (find :sync flags)
-    (check-windows (flush-file-buffers fd)))
+    (check-windows (flush-file-buffers (car fd))))
   NIL)
 
 (defun mprotect (addr size protection)
