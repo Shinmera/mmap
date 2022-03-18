@@ -130,9 +130,7 @@
         (values addr fd size)))))
 
 (defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)) size (offset 0))
-  (%mmap (etypecase path
-           (string path)
-           (pathname (uiop:native-namestring path)))
+  (%mmap (translate-path path)
          size offset
          (cffi:foreign-bitfield-value 'open-flag open)
          (cffi:foreign-bitfield-value 'protection-flag protection)
