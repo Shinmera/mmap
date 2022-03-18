@@ -24,7 +24,8 @@
 (defun translate-path (path)
   (etypecase path
     (string path)
-    (pathname (uiop:native-namestring path))))
+    (pathname (uiop:native-namestring path))
+    (null)))
 
 #-(or unix windows)
 (defun mmap (path &key open protection mmap)
