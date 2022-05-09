@@ -156,7 +156,7 @@
 (define-compiler-macro msync (&environment env addr fd size &key (flags ''(:sync)))
   (declare (ignore fd))
   `(progn
-     (check-posix (= 0 (u-msync ,addr ,size ,(cfold env `(cffi:foreign-bitfield-value 'msync-flag ,flags)) flags)))
+     (check-posix (= 0 (u-msync ,addr ,size ,(cfold env `(cffi:foreign-bitfield-value 'msync-flag ,flags) flags))))
      NIL))
 
 (defun mprotect (addr size protection)
