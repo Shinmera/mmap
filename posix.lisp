@@ -107,19 +107,27 @@
 (defun %mmap (path size offset open protection mmap)
   (declare (type fixnum open protection mmap))
   (declare (optimize speed))
-  (let ((fd -1))
+  (let ((fd -1)
+        fresh-fd
+        (error-handler (constantly nil)))
     (etypecase path
+      ((and fixnum unsigned-byte)
+        (setf fd path)
+        ;; If an fd is provided, the burden ought to be on the caller to
+        ;; provide the size as well
+        (check-type size unsigned-byte))
       (string
-       (setf fd (u-open path open))
+       (setf fd (u-open path open)
+             fresh-fd fd
+             error-handler (lambda (e)
+                            (declare (ignore e))
+                            (check-posix (= 0 (u-close fd)))))
        (check-posix (<= 0 fd))
        (unless size
          (with-open-file (stream path :direction :input :element-type '(unsigned-byte 8))
            (setf size (file-length stream)))))
       (null))
-    (handler-bind ((error (lambda (e)
-                            (declare (ignore e))
-                            (when (/= fd -1)
-                              (check-posix (= 0 (u-close fd)))))))
+    (handler-bind ((error error-handler))
       (let ((addr (u-mmap (cffi:null-pointer)
                           size
                           protection
@@ -127,7 +135,7 @@
                           fd
                           offset)))
         (check-posix (/= (1- (ash 1 64)) (cffi:pointer-address addr)))
-        (values addr fd size)))))
+        (values addr fresh-fd size)))))
 
 (defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)) size (offset 0))
   (%mmap (translate-path path)

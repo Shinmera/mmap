@@ -36,13 +36,13 @@ See MMAP-ERROR")
     "Map the given path or number of bytes into the address space.
 
 PATH can be either a pathname designator, or NIL. If it is NIL, an anonymous
-file is mapped and the MMAP flag list must include the flag :ANONYMOUS.
-If it is a path, then the contents of the given file on the file system are
-mapped into the address space. The file contents can then be read, written,
-or executed depending on the given flags as if normal memory was accessed.
-If the file is NIL or its size cannot be automatically determined, you must
-pass a valid SIZE. You may optionally pass an OFFSET (in bytes) into the
-file from which the mapping begins.
+file is mapped and the MMAP flag list must include the flag :ANONYMOUS. If
+it is a path or an open POSIX file descriptor, then the contents of the
+given file on the file system are mapped into the address space. The file
+contents can then be read, written, or executed depending on the given flags
+as if normal memory was accessed. If the file is NIL or its size cannot be
+automatically determined, you must pass a valid SIZE. You may optionally
+pass an OFFSET (in bytes) into the file from which the mapping begins.
 
 If the map attempt fails, an error of type MMAP-ERROR is signalled.
 If the call succeeds, three values are returned:
@@ -51,7 +51,7 @@ If the call succeeds, three values are returned:
            memory where the file contents have been mapped. The contents
            should be placed in increasing address order, unless the flag
            :GROWS-DOWN is active.
-  FD   --- An opaque file descriptor. You should not touch this.
+  FD   --- A fresh opaque file descriptor. You should not touch this.
   SIZE --- The size of the region of memory that has been mapped in bytes.
 
 All three values need to be passed on to MUNMAP completely unchanged. Any
@@ -147,6 +147,9 @@ same goes for calling MUNMAP with values not directly returned by MMAP,
 calling it with changed values returned by MMAP, or attempting to
 dereference the PTR after a call to MUNMAP.
 
+If an open file descriptor was passed to MMAP, then MUNMAP will not attempt
+to close the file.
+
 This function returns nothing useful.
 
 This function may signal an MMAP-ERROR in case the operating system notices
@@ -168,7 +171,7 @@ to MMAP.
 
 The following flags are supported:
 
- :SYNC          --- [EVERY] Writing is synchronous. A call to this function 
+ :SYNC          --- [EVERY] Writing is synchronous. A call to this function
                             will not return until the data is flushed to
                             disk.
  :ASYNC         --- [EVERY] Writing is asynchronous and a call will return
