@@ -24,7 +24,7 @@
 (defun translate-path (path)
   (etypecase path
     #+unix
-    ((and fixnum unsigned-byte) path)
+    ((unsigned-byte #+64-bit 64 #-64-bit 32) path)
     (string path)
     (pathname (uiop:native-namestring path))
     (null)))
