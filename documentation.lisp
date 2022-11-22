@@ -35,14 +35,15 @@ See MMAP-ERROR")
   (function mmap
     "Map the given path or number of bytes into the address space.
 
-PATH can be either a pathname designator, or NIL. If it is NIL, an anonymous
-file is mapped and the MMAP flag list must include the flag :ANONYMOUS.
-If it is a path, then the contents of the given file on the file system are
-mapped into the address space. The file contents can then be read, written,
-or executed depending on the given flags as if normal memory was accessed.
-If the file is NIL or its size cannot be automatically determined, you must
-pass a valid SIZE. You may optionally pass an OFFSET (in bytes) into the
-file from which the mapping begins.
+PATH can be either a pathname designator, FD, or NIL. If it is NIL, an
+anonymous file is mapped and the MMAP flag list must include the flag
+:ANONYMOUS. If it is a path or an open POSIX file descriptor, then the
+contents of the given file on the file system are mapped into the
+address space. The file contents can then be read, written, or
+executed depending on the given flags as if normal memory was
+accessed. If the file is NIL or its size cannot be automatically
+determined, you must pass a valid SIZE. You may optionally pass an
+OFFSET (in bytes) into the file from which the mapping begins.
 
 If the map attempt fails, an error of type MMAP-ERROR is signalled.
 If the call succeeds, three values are returned:
@@ -149,6 +150,10 @@ dereference the PTR after a call to MUNMAP.
 
 This function returns nothing useful.
 
+On POSIX systems you may pass NIL for the FD argument, in which case
+the file descriptor is not closed. It is then your responsibility to
+close it appropriately at a later point.
+
 This function may signal an MMAP-ERROR in case the operating system notices
 a problem.
 
@@ -168,7 +173,7 @@ to MMAP.
 
 The following flags are supported:
 
- :SYNC          --- [EVERY] Writing is synchronous. A call to this function 
+ :SYNC          --- [EVERY] Writing is synchronous. A call to this function
                             will not return until the data is flushed to
                             disk.
  :ASYNC         --- [EVERY] Writing is asynchronous and a call will return
@@ -221,6 +226,11 @@ This is a convenience macro that calls MMAP with the given arguments,
 binds the results to the variables ADDR, FD, and SIZE, and automatically
 ensures that MUNMAP is called with the correct values when the body is
 exited.
+
+If the flag DONT-CLOSE is set, WITH-MMAP will not free the file
+descriptor on unwind. This is useful primarily if you pass in an FD
+for the path yourself and are either not responsible for closing it,
+or would like to continue using it for other purposes.
 
 It is safe to change the ADDR, FD, and SIZE bindings, though probably not
 very good style to do so. It is NOT safe to save the ADDR and SIZE values
