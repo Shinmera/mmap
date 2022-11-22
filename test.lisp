@@ -33,7 +33,7 @@
     (of-type unsigned-byte
              (setf fd (mmap::u-open (uiop:native-namestring *this*) '(:read))))
     (finish
-      (mmap:with-mmap (addr fd* size fd :size (length read))
+      (mmap:with-mmap (addr fd* size fd :size (length read) :dont-close t)
         (setf mmapped (cffi:foreign-string-to-lisp addr :count size :encoding :utf-8))))
     (is = 0 (mmap::u-close fd))
     (is string= read mmapped)))

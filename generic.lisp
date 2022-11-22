@@ -45,7 +45,8 @@
 (defun mprotect (addr size protection)
   (error "Platform not supported."))
 
-(defmacro with-mmap ((addr fd size path &rest args) &body body)
+(defmacro with-mmap ((addr fd size path &rest args &key dont-close &allow-other-keys) &body body)
+  (remf args :dont-close)
   (let ((addrg (gensym "ADDR"))
         (fdg (gensym "FD"))
         (sizeg (gensym "SIZE")))
@@ -56,4 +57,4 @@
                   (,size ,sizeg))
               (declare (ignorable ,fd ,size))
               ,@body)
-         (munmap ,addrg ,fdg ,sizeg)))))
+         (munmap ,addrg ,(unless dont-close fdg) ,sizeg)))))

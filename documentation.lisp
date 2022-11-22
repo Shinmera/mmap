@@ -147,9 +147,6 @@ same goes for calling MUNMAP with values not directly returned by MMAP,
 calling it with changed values returned by MMAP, or attempting to
 dereference the PTR after a call to MUNMAP.
 
-If an open file descriptor was passed to MMAP, then MUNMAP will not attempt
-to close the file.
-
 This function returns nothing useful.
 
 This function may signal an MMAP-ERROR in case the operating system notices
@@ -224,6 +221,9 @@ This is a convenience macro that calls MMAP with the given arguments,
 binds the results to the variables ADDR, FD, and SIZE, and automatically
 ensures that MUNMAP is called with the correct values when the body is
 exited.
+
+If the flag DONT-CLOSE is set, WITH-MMAP will not free the file associated
+with the given path.
 
 It is safe to change the ADDR, FD, and SIZE bindings, though probably not
 very good style to do so. It is NOT safe to save the ADDR and SIZE values

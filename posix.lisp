@@ -108,7 +108,6 @@
   (declare (type fixnum open protection mmap))
   (declare (optimize speed))
   (let ((fd -1)
-        fresh-fd
         (error-handler (constantly nil)))
     (etypecase path
       ((and fixnum unsigned-byte)
@@ -118,7 +117,6 @@
         (check-type size unsigned-byte))
       (string
        (setf fd (u-open path open)
-             fresh-fd fd
              error-handler (lambda (e)
                             (declare (ignore e))
                             (check-posix (= 0 (u-close fd)))))
@@ -135,7 +133,7 @@
                           fd
                           offset)))
         (check-posix (/= (1- (ash 1 64)) (cffi:pointer-address addr)))
-        (values addr fresh-fd size)))))
+        (values addr fd size)))))
 
 (defun mmap (path &key (open '(:read)) (protection '(:read)) (mmap '(:private)) size (offset 0))
   (%mmap (translate-path path)
