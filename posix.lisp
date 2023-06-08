@@ -34,6 +34,27 @@
   (:invalidate    #x2)
   (:sync          #x4))
 
+(cffi:defcenum madvise-flag
+  (:normal            0)
+  (:random            1)
+  (:sequential        2)
+  (:will-need         3)
+  (:dont-need         4)
+  (:free              8)
+  (:remove            9)
+  (:dont-fork        10)
+  (:do-fork          11)
+  (:mergeable        12)
+  (:unmergeable      13)
+  (:huge-page        14)
+  (:no-huge-page     15)
+  (:dont-dump        16)
+  (:do-dump          17)
+  (:wipe-on-fork     18)
+  (:keep-on-fork     19)
+  (:cold             20)
+  (:pageout          21))
+
 (cffi:defbitfield open-flag
   (:read          #o0000000)
   (:write         #o0000002)
@@ -98,6 +119,11 @@
   (address :pointer)
   (length size-t)
   (flags protection-flag))
+
+(cffi:defcfun (u-madvise "madvise") :int
+  (address :pointer)
+  (length size-t)
+  (advice madvise-flag))
 
 (defun check-posix (result)
   (unless result
@@ -172,4 +198,13 @@
 (define-compiler-macro mprotect (&environment env addr size protection)
   `(progn
      (check-posix (= 0 (u-mprotect ,addr ,size ,(cfold env `(cffi:foreign-bitfield-value 'protection-flag ,protection) protection))))
+     NIL))
+
+(defun madvise (addr size advice)
+  (check-posix (= 0 (u-madvise addr size advice)))
+  NIL)
+
+(define-compiler-macro madvise (&environment env addr size advice)
+  `(progn
+     (check-posix (= 0 (u-madvise ,addr ,size ,(cfold env `(cffi:foreign-enum-value 'madvise-flag ,advice) advice))))
      NIL))

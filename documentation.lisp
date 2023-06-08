@@ -219,6 +219,61 @@ See http://pubs.opengroup.org/onlinepubs/9699919799/functions/mprotect.html
 See http://man7.org/linux/man-pages/man2/mprotect.2.html
 See https://msdn.microsoft.com/en-us/library/windows/desktop/aa366898(v=vs.85).aspx")
 
+  (function madvise
+    "Gives hints about the usage patterns of the memory to better tune mapping behaviour.
+
+The values passed to this function must be the ones retrieved from a call
+to MMAP.
+
+The following advice hints are supported:
+
+ :NORMAL          --- [POSIX] This is the default.
+ :SEQUENTIAL      --- [POSIX] Expect memory to be addressed sequentially.
+ :RANDOM          --- [POSIX] Expect memory to be addressed randomly.
+ :WILL-NEED       --- [POSIX] Expect the memory to be used very soon.
+ :DONT-NEED       --- [POSIX] Expect the memory to not be needed any
+                              time soon. This will most likely cause
+                              pages to be offloaded until they are
+                              accessed again.
+ :FREE            --- [LINUX] The pages in the specified range are no
+                              longer needed and can be freed at any
+                              time, for instance to make space in case
+                              of memory pressure.
+ :REMOVE          --- [LINUX] Free the given pages and the associated
+                              backing store.
+ :DONT-FORK       --- [LINUX] Don't make changes available in children.
+ :DO-FORK         --- [LINUX] Undo :DONT-FORK behaviour.
+ :MERGEABLE       --- [LINUX] The pages in the specified range may be
+                              merged with ones with identical content.
+ :UNMERGEABLE     --- [LINUX] Undo :MERGEABLE behaviour.
+ :HUGE-PAGE       --- [LINUX] Enable transparent huge pages for the
+                              specified page range.
+ :NO-HUGE-PAGE    --- [LINUX] Ensure that the memory in the given
+                              range is not backed by transparent huge
+                              pages.
+ :DONT-DUMP       --- [LINUX] The pages in the specified range should
+                              be excluded from core dumps.
+ :DO-DUMP         --- [LINUX] Undo :DONT-DUMP behaviour.
+ :WIPE-ON-FORK    --- [LINUX] Memory in the given range is zeroed out
+                              for children.
+ :KEEP-ON-FORK    --- [LINUX] Undo :WIPE-ON-FORK behaviour.
+ :COLD            --- [LINUX] Deactivate the given range of
+                              pages. This makes them a more likely
+                              target for reclamation in the presence
+                              of memory pressure.
+ :PAGEOUT         --- [LINUX] The pages in the specified range should
+                              be reclaimed and their data flushed out.
+
+This function returns nothing useful.
+
+This function may signal an MMAP-ERROR in case the operating system notices
+a problem.
+
+See MMAP
+See MMAP-ERROR
+See https://pubs.opengroup.org/onlinepubs/007904875/functions/posix_madvise.html
+See https://man7.org/linux/man-pages/man2/madvise.2.html")
+
   (function with-mmap
     "Map the file or number of bytes to a memory region within the body.
 

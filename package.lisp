@@ -15,4 +15,5 @@
    #:munmap
    #:msync
    #:mprotect
+   #:madvise
    #:with-mmap))

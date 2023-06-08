@@ -45,6 +45,10 @@
 (defun mprotect (addr size protection)
   (error "Platform not supported."))
 
+#-(or unix windows)
+(defun madvise (addr size advice)
+  (error "Platform not supported."))
+
 (defmacro with-mmap ((addr fd size path &rest args &key dont-close &allow-other-keys) &body body)
   (let ((addrg (gensym "ADDR"))
         (fdg (gensym "FD"))
