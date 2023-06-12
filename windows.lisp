@@ -144,7 +144,7 @@
          (cffi:with-foreign-object (tmp 'large-integer)
            (let ((ret (get-file-size-ex fd tmp)))
              (check-windows ret)
-             (setf size (cffi:mem-ref tmp 'large-integer))))))
+             (setf size (- (cffi:mem-ref tmp 'large-integer) offset))))))
       (null))
     (let* ((end (+ (the (unsigned-byte 64) size) offset))
            (handle (create-file-mapping fd

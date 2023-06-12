@@ -149,7 +149,7 @@
        (check-posix (<= 0 fd))
        (unless size
          (with-open-file (stream path :direction :input :element-type '(unsigned-byte 8))
-           (setf size (file-length stream)))))
+           (setf size (- (file-length stream) offset)))))
       (null))
     (handler-bind ((error error-handler))
       (let ((addr (u-mmap (cffi:null-pointer)
