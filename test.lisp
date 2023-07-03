@@ -1,9 +1,3 @@
-#|
- This file is a part of mmap
- (c) 2017 Shirakumo http://tymoon.eu (shinmera@tymoon .eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (defpackage #:mmap-test
   (:nicknames #:org.shirakumo.fraf.trial.mmap.test)
   (:use :cl :parachute))
