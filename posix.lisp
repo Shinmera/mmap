@@ -1,5 +1,7 @@
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
+(pushnew :mmap *features*)
+
 (cffi:defbitfield protection-flag
   (:none          #x0)
   (:read          #x1)

@@ -1,5 +1,7 @@
 (in-package #:org.shirakumo.fraf.trial.mmap)
 
+(pushnew :mmap *features*)
+
 (defconstant create-new 1)
 (defconstant file-attribute-normal 128)
 (defconstant file-flag-no-buffering 536870912)

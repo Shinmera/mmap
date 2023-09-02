@@ -17,3 +17,4 @@ It also provides a convenience macro called `with-mmap` to perform safe, local m
               for char = (code-char (cffi:mem-aref addr :char i))
               do (write-char char out))))
 
+If you're on a system where mmap is supported, `:mmap` will be in `*features*`.
