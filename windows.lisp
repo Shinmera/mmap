@@ -120,10 +120,18 @@
 (defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
   (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
-  (let ((fd invalid-handle-value))
+  (let ((fd invalid-handle-value)
+        (error-handler (lambda (e)
+                         (declare (ignore e))
+                         (close-handle handle))))
     (declare (type (or null (unsigned-byte 64)) size))
     (declare (type cffi:foreign-pointer fd))
     (etypecase path
+      ((and fixnum unsigned-byte)
+       (setf fd path)
+       ;; If an fd is provided, the burden ought to be on the caller to
+       ;; provide the size as well
+       (check-type size unsigned-byte))
       (string
        (cffi:with-foreign-string (string path :encoding :utf-16)
          (setf fd (create-file string
@@ -134,7 +142,12 @@
                                (cffi:null-pointer)
                                open-disposition
                                open-flags
-                               (cffi:null-pointer))))
+                               (cffi:null-pointer))
+               error-handler (lambda (e)
+                               (declare (ignore e))
+                               (close-handle handle)
+                               (unless (cffi:pointer-eq invalid-handle-value fd)
+                                 (close-handle fd)))))
        (check-windows (not (cffi:pointer-eq fd invalid-handle-value)))
        (unless size
          (cffi:with-foreign-object (tmp 'large-integer)
@@ -155,11 +168,7 @@
                                       (ldb (byte 32 0) offset)
                                       size)))
       (declare (type (unsigned-byte 64) end))
-      (handler-bind ((mmap-error (lambda (e)
-                                   (declare (ignore e))
-                                   (close-handle handle)
-                                   (unless (cffi:pointer-eq invalid-handle-value fd)
-                                     (close-handle fd)))))
+      (handler-bind ((error error-handler))
         (check-windows (not (cffi:null-pointer-p pointer)))
         (values pointer (cons fd handle) size)))))
 
