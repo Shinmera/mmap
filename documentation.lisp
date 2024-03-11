@@ -39,6 +39,11 @@ accessed. If the file is NIL or its size cannot be automatically
 determined, you must pass a valid SIZE. You may optionally pass an
 OFFSET (in bytes) into the file from which the mapping begins.
 
+[POSIX] PATH may also be the symbol :ANONYMOUS, in which case an anonymous
+file descriptor is created and returned for you. This can be useful when
+sharing a file descriptor with another process without needing to involve
+a disk-backed file.
+
 If the map attempt fails, an error of type MMAP-ERROR is signalled.
 If the call succeeds, three values are returned:
 
