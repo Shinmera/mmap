@@ -65,12 +65,21 @@
   (:large-file    #o0100000)
   (:directory     #o0200000)
   (:no-follow     #o0400000)
+  (:no-atime      #o1000000)
+  (:close-exec    #o2000000)
   (:file-sync     #o4010000))
 
 (cffi:defbitfield remap-flag
   (:may-move      #x1)
   (:fixed         #x2)
   (:dont-unmap    #x4))
+
+(cffi:defbitfield memfd-flag
+  (:close-exec    #x01)
+  (:allow-sealing #x02)
+  (:huge-table    #x04)
+  (:no-exec-seal  #x08)
+  (:executable    #x10))
 
 (cffi:defctype size-t
   #+64-bit :uint64
@@ -90,6 +99,9 @@
   (mode open-flag))
 
 (cffi:defcfun (u-close "close") :int
+  (fd :int))
+
+(cffi:defcfun (u-unlink "unlink") :int
   (fd :int))
 
 ;; (cffi:defcfun (u-fstat "fstat") :int
@@ -136,9 +148,44 @@
   (fd :int)
   (new-size size-t))
 
+(cffi:defcfun (memfd-create "memfd_create") :int
+  (name :string)
+  (flags memfd-flag))
+
+(cffi:defcfun (shm-open "shm_open") :int
+  (name :size)
+  (flags open-flag)
+  (mode :int))
+
+(cffi:defcfun (getenv "getenv") :string
+  (name :string))
+
+(cffi:defcfun (mkostemp "mkostemp") :int
+  (name :string)
+  (flags open-flag))
+
 (defun check-posix (result)
   (unless result
     (error-mmap errno (strerror errno))))
+
+(defun create-anonymous-fd ()
+  (or
+   (ignore-errors
+    (let ((fd (memfd-create "mmap" '(:close-exec))))
+      (check-posix (<= 0 fd))
+      fd))
+   (ignore-errors ;; Special value SHM_ANON is 1.
+    (let ((fd (shm-open 1 '(:write :close-exec) #o600)))
+      (check-posix (<= 0 fd))
+      fd))
+   (let ((runtime-dir (getenv "XDG_RUNTIME_DIR")))
+     (when (or (null runtime-dir) (string= "" runtime-dir))
+       (setf runtime-dir "/run/"))
+     (cffi:with-foreign-string (str (format NIL "~a/mmap-XXXXXX" runtime-dir))
+       (let ((fd (mkostemp str '(:close-exec))))
+         (check-posix (<= 0 fd))
+         (u-unlink str)
+         fd)))))
 
 (declaim (notinline %mmap))
 (defun %mmap (path size offset open protection mmap)
@@ -147,16 +194,18 @@
   (let ((fd -1)
         (error-handler (constantly nil)))
     (etypecase path
+      ((eql :anonymous)
+       (setf fd (create-anonymous-fd)))
       ((and fixnum unsigned-byte)
-        (setf fd path)
-        ;; If an fd is provided, the burden ought to be on the caller to
-        ;; provide the size as well
-        (check-type size unsigned-byte))
+       (setf fd path)
+       ;; If an fd is provided, the burden ought to be on the caller to
+       ;; provide the size as well
+       (check-type size unsigned-byte))
       (string
        (setf fd (u-open path open)
              error-handler (lambda (e)
-                            (declare (ignore e))
-                            (check-posix (= 0 (u-close fd)))))
+                             (declare (ignore e))
+                             (check-posix (= 0 (u-close fd)))))
        (check-posix (<= 0 fd))
        (unless size
          (with-open-file (stream path :direction :input :element-type '(unsigned-byte 8))
