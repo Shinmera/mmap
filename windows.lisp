@@ -105,6 +105,10 @@
   (size dword)
   (arguments :pointer))
 
+(cffi:defcfun (chsize "_chsize_s") :int
+  (fd :int)
+  (size :int64))
+
 (defmacro check-windows (condition)
   `(unless ,condition
      (let ((errno (get-last-error)))
@@ -266,3 +270,10 @@
   `(cffi:with-foreign-object (oldprotect 'dword)
      (check-windows (virtual-protect ,addr ,size ,(cfold env `(translate-protection-flags ,protection) protection) oldprotect))
      NIL))
+
+(defun mremap (addr fd size new-size)
+  ;; FIXME: how to keep the right flags?
+  (munmap addr NIL size)
+  (check-windows (close-handle (cdr fd)))
+  (check-windows (= 0 (chsize fd size)))
+  (mmap (car fd) :size new-size))

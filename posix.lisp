@@ -67,6 +67,11 @@
   (:no-follow     #o0400000)
   (:file-sync     #o4010000))
 
+(cffi:defbitfield remap-flag
+  (:may-move      #x1)
+  (:fixed         #x2)
+  (:dont-unmap    #x4))
+
 (cffi:defctype size-t
   #+64-bit :uint64
   #+32-bit :uint32)
@@ -120,6 +125,16 @@
   (address :pointer)
   (length size-t)
   (advice madvise-flag))
+
+(cffi:defcfun (u-mremap "mremap") :pointer
+  (old-address :pointer)
+  (old-length size-t)
+  (new-size size-t)
+  (flags remap-flag))
+
+(cffi:defcfun (u-ftruncate "ftruncate") :int
+  (fd :int)
+  (new-size size-t))
 
 (defun check-posix (result)
   (unless result
@@ -204,3 +219,18 @@
   `(progn
      (check-posix (= 0 (u-madvise ,addr ,size ,(cfold env `(cffi:foreign-enum-value 'madvise-flag ,advice) advice))))
      NIL))
+
+(defun mremap (addr fd size new-size)
+  (if (ignore-errors (cffi:foreign-symbol-pointer "mremap"))
+      (let ((addr (u-mremap addr
+                            size
+                            new-size
+                            '(:may-move))))
+        (check-posix (/= (1- (ash 1 64)) (cffi:pointer-address addr)))
+        (check-posix (= 0 (u-ftruncate fd new-size)))
+        (values addr fd new-size))
+      (progn
+        ;; FIXME: how to keep the right flags?
+        (munmap addr NIL size)
+        (check-posix (= 0 (u-ftruncate fd new-size)))
+        (mmap fd :size new-size))))
