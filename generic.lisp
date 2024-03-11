@@ -19,6 +19,8 @@
   (etypecase path
     #+unix
     ((unsigned-byte #+64-bit 64 #-64-bit 32) path)
+    #+unix
+    ((eql :anonymous) path)
     (string path)
     (pathname (uiop:native-namestring path))
     (null)))

@@ -273,6 +273,24 @@ See MMAP-ERROR
 See https://pubs.opengroup.org/onlinepubs/007904875/functions/posix_madvise.html
 See https://man7.org/linux/man-pages/man2/madvise.2.html")
 
+  (function mremap
+    "Changes the size of the mapped segment.
+
+The values passed to this function must be the ones retrieved from a
+call to MMAP.
+
+The values returned from this function are the same kind as returned
+from MMAP and should be used in place of the original values for
+further operations.
+
+When the mapped segment is backed by a file, the file is truncated to
+fit the newly requested size.
+
+See MMAP
+See MUNMAP
+See MMAP-ERROR
+See https://man7.org/linux/man-pages/man2/mremap.2.html")
+
   (function with-mmap
     "Map the file or number of bytes to a memory region within the body.
 
