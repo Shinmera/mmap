@@ -132,9 +132,12 @@
     (declare (type cffi:foreign-pointer fd))
     (etypecase path
       ((and fixnum unsigned-byte)
-       (setf fd path)
+       (setf fd (cffi:make-pointer path))
        ;; If an fd is provided, the burden ought to be on the caller to
        ;; provide the size as well
+       (check-type size unsigned-byte))
+      (cffi:foreign-pointer
+       (setf fd path)
        (check-type size unsigned-byte))
       (string
        (cffi:with-foreign-string (string path :encoding :utf-16)
@@ -275,5 +278,5 @@
   ;; FIXME: how to keep the right flags?
   (munmap addr NIL size)
   (check-windows (close-handle (cdr fd)))
-  (check-windows (= 0 (chsize fd size)))
+  (check-windows (= 0 (chsize (car fd) size)))
   (mmap (car fd) :size new-size))

@@ -17,7 +17,9 @@
 
 (defun translate-path (path)
   (etypecase path
-    #+unix
+    #+windows
+    (cffi:foreign-pointer path)
+    #+(or unix windows)
     ((unsigned-byte #+64-bit 64 #-64-bit 32) path)
     #+unix
     ((eql :anonymous) path)
