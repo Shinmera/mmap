@@ -124,10 +124,11 @@
 (defun %mmap (path size offset open-access open-disposition open-flags protection map-access)
   (declare (type fixnum open-access open-disposition open-flags protection map-access offset))
   (declare (optimize speed))
-  (let ((fd invalid-handle-value)
-        (error-handler (lambda (e)
-                         (declare (ignore e))
-                         (close-handle handle))))
+  (let* ((fd invalid-handle-value)
+         handle pointer
+         (error-handler (lambda (e)
+                          (declare (ignore e))
+                          (when handle (close-handle handle)))))
     (declare (type (or null (unsigned-byte 64)) size))
     (declare (type cffi:foreign-pointer fd))
     (etypecase path
@@ -162,19 +163,19 @@
              (check-windows ret)
              (setf size (- (cffi:mem-ref tmp 'large-integer) offset))))))
       (null))
-    (let* ((end (+ (the (unsigned-byte 64) size) offset))
-           (handle (create-file-mapping fd
+    (let ((end (+ (the (unsigned-byte 64) size) offset)))
+      (declare (type (unsigned-byte 64) end))
+      (setf handle (create-file-mapping fd
                                         (cffi:null-pointer)
                                         protection
                                         (ldb (byte 32 32) end)
                                         (ldb (byte 32 0) end)
                                         (cffi:null-pointer)))
-           (pointer (map-view-of-file handle
+      (setf pointer (map-view-of-file handle
                                       map-access
                                       (ldb (byte 32 32) offset)
                                       (ldb (byte 32 0) offset)
-                                      size)))
-      (declare (type (unsigned-byte 64) end))
+                                      size))
       (handler-bind ((error error-handler))
         (check-windows (not (cffi:null-pointer-p pointer)))
         (values pointer (cons fd handle) size)))))
