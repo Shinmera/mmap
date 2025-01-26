@@ -24,7 +24,7 @@
     #+unix
     ((eql :anonymous) path)
     (string path)
-    (pathname (uiop:native-namestring path))
+    (pathname (pathname-utils:native-namestring path))
     (null)))
 
 #-(or unix windows)

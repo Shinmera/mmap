@@ -15,5 +15,6 @@
                (:file "documentation"))
   :defsystem-depends-on (:trivial-features)
   :depends-on (:documentation-utils
+               :pathname-utils
                :cffi)
   :in-order-to ((asdf:test-op (asdf:test-op :mmap-test))))
