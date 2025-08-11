@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "Portable mmap (file memory mapping) utility library."
-  :homepage "https://shinmera.github.io/mmap/"
-  :bug-tracker "https://github.com/Shinmera/mmap/issues"
-  :source-control (:git "https://github.com/Shinmera/mmap.git")
+  :homepage "https://shinmera.com/docs/mmap/"
+  :bug-tracker "https://shinmera.com/project/mmap/issues"
+  :source-control (:git "https://shinmera.com/project/mmap.git")
   :serial T
   :components ((:file "package")
                (:file "generic")
