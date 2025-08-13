@@ -1,20 +1,4 @@
-## About MMAP
-This is a utility library providing access to the `mmap` family of functions in a portable way. It should work on Posix and Windows systems. `mmap` allows you to directly map a file into the address space of your process without having to manually read it into memory sequentially. Typically this is much more efficient for files that are larger than a few Kb.
+# This repository has [moved](https://shinmera.com/projects/mmap)!
+Due to Microsoft's continued enshittification of the platform this repository has been moved to [Codeberg](https://shinmera.com/projects/mmap) in August of 2025. It will not receive further updates or patches. **Issues and pull requests will not be looked at here either**, please submit your patches and issue tickets on Codeberg, or send them directly via good old email patches to [shirakumo@tymoon.eu](mailto:shirakumo@tymoon.eu).
 
-## Supported operations
-The library offers access to the following functions:
-
-* `mmap`
-* `munmap`
-* `msync`
-* `mprotect`
-
-It also provides a convenience macro called `with-mmap` to perform safe, local mappings of files.
-
-    (mmap:with-mmap (addr fd size #p"/etc/lsb-release")
-      (with-output-to-string (out)
-        (loop for i from 0 below size
-              for char = (code-char (cffi:mem-aref addr :char i))
-              do (write-char char out))))
-
-If you're on a system where mmap is supported, `:mmap` will be in `*features*`.
+Thanks.
